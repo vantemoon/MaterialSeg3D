@@ -5,7 +5,7 @@ FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
 WORKDIR /app
 
 # Install system dependencies
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     git \
     wget \
@@ -36,7 +36,7 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 RUN conda update -n base -c defaults conda -y
 
 # Create a new Conda environment
-RUN conda create -n environment_name python=3.9.15 -y
+RUN conda create -n materialseg3d-env python=3.9.15 -y
 
 # Activate the environment in the PATH
 ENV PATH=$CONDA_DIR/envs/materialseg3d-env/bin:$CONDA_DIR/bin:$PATH
@@ -53,11 +53,11 @@ RUN conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
 RUN conda install -c bottler nvidiacub nvidiacub -y
 RUN conda install pytorch3d -c pytorch3d -y
 RUN conda install xformers -c xformers -y
-RUN cd /app/MaterialSeg3D/Text2Tex
-RUN pip install -r requirements.txt
-RUN cd /app/MaterialSeg3D
+RUN pip install -r /app/MaterialSeg3D/Text2Tex/requirements.txt
+WORKDIR /app/MaterialSeg3D
 
 # Download the pre-trained depth file
+RUN mkdir -p /app/Tex2Tex/models/ControlNet/models
 RUN wget https://huggingface.co/lllyasviel/ControlNet/blob/main/models/control_sd15_depth.pth -O /app/Tex2Tex/models/ControlNet/models/control_sd15_depth.pth
 
 # Install GET3D dependencies
@@ -74,16 +74,16 @@ RUN pip install opencv-python==4.5.4.58
 RUN wget https://ftp.halifax.rwth-aachen.de/blender/release/Blender2.90/blender-2.90.0-linux64.tar.xz -O /tmp/blender.tar.xz
 RUN tar -xf /tmp/blender.tar.xz -C /opt
 RUN cd /opt/blender-2.90.0-linux64/2.90/python/bin
-RUN ./python3.7m -m ensurepip
-RUN ./python3.7m -m pip install numpy
+RUN /opt/blender-2.90.0-linux64/2.90/python/bin/python3.7m -m ensurepip
+RUN /opt/blender-2.90.0-linux64/2.90/python/bin/python3.7m -m pip install numpy
 
 # Install MMSegmentation
-RUN cd /app
+WORKDIR /app
 RUN pip install -U openmim
 RUN mim install mmengine
-RUN mim install "mmcv==2.1.0"
-RUN cd mmsegmentation
-RUN pip install -v -e .
+# RUN mim install mmcv==2.1.0
+RUN pip install mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12/index.html
+RUN cd /app/MaterialSeg3D/mmsegmentation && pip install -v -e .
 
 # Download the model weights from Google Drive and unzip the file
 RUN pip install gdown
@@ -92,6 +92,21 @@ RUN unzip weights.zip -d temp_dir
 RUN rm weights.zip
 RUN mv temp_dir/* ./work_dir
 RUN rmdir temp_dir
+
+# Install specific versions of dependencies
+RUN pip install --no-cache-dir --upgrade pip wheel && \
+    pip install --no-cache-dir setuptools==60.2.0 && \
+    pip install --no-cache-dir \
+        gradio==3.17.0 \
+        huggingface-hub==0.11.1 \
+        diffusers==0.7.2 \
+        transformers==4.20.0 \
+        numpy==1.21.6 && \
+    pip install --no-cache-dir \
+        torch==1.12.1+cu113 torchvision==0.13.1+cu113 \
+        -f https://download.pytorch.org/whl/torch_stable.html && \
+    pip install --no-cache-dir \
+        pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu113_pyt1121/download.html
 
 # Copy the entrypoint script and make it executable
 COPY entrypoint.sh /app/entrypoint.sh
