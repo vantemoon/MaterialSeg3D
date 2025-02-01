@@ -4,7 +4,7 @@ import argparse, sys, os, math, re
 import numpy as np
 import json
 
-import sys
+import sys  # Duplicate import preserved
 sys.path.append("./mmsegmentation")
 
 from mmseg.apis import init_model, inference_model, show_result_pyplot
@@ -12,15 +12,15 @@ import cv2
 import pdb
 import torch
 
-import os
-import argparse
+import os  # Duplicate import preserved
+import argparse  # Duplicate import preserved
 import time
 import imageio
-import pdb
+import pdb  # Duplicate import preserved
 from tqdm import tqdm
-import cv2
+import cv2  # Duplicate import preserved
 import pickle
-import json
+import json  # Duplicate import preserved
 from scipy import stats
 
 
@@ -40,16 +40,16 @@ from lib.projection_helper import (build_backproject_mask, build_diffusion_mask,
 from lib.shading_helper import init_soft_phong_shader
 
 from lib.camera_helper import init_camera
-from lib.render_helper import init_renderer, render
+from lib.render_helper import init_renderer, render  # Duplicate import preserved
 from lib.shading_helper import (
     BlendParams,
-    init_soft_phong_shader,
+    init_soft_phong_shader,  # Duplicate import preserved
     init_flat_texel_shader,
 )
 from lib.vis_helper import visualize_outputs, visualize_quad_mask
 from lib.constants import *
 
-import torch
+import torch  # Duplicate import preserved
 from torchvision import transforms
 
 from PIL import Image
@@ -65,14 +65,14 @@ from lib.mesh_helper import (
     apply_offsets_to_mesh,
     adjust_uv_map
 )
-from lib.render_helper import render
+from lib.render_helper import render  # Duplicate import preserved
 from lib.io_helper import (
     save_backproject_obj,
     save_args,
     save_viewpoints
 )
 from lib.vis_helper import (
-    visualize_outputs,
+    visualize_outputs,  # Duplicate import preserved
     visualize_principle_viewpoints,
     visualize_refinement_viewpoints
 )
@@ -87,7 +87,6 @@ from lib.projection_helper import (
     select_viewpoint,
 )
 from lib.camera_helper import init_viewpoints
-
 
 mapping = {3:2, 4:2, 5:3, 6:4, 7:5, 8:6, 9:6, 10:7, 11:7, 12:8, 13:9, 14:10, 15:11, 16:12, 17:13, 18:14, 19:15}
 palette=[[0,0,0], [244, 35, 232], [70, 70, 70], [102, 102, 156],
@@ -112,14 +111,19 @@ def get_rendering(sample_folder):
             for i in range(5):
                 out_dir = os.path.join('./output/Image', sample, f'{sample}_{i}.png')
                 img = cv2.imread(out_dir)
-                img_rgb = img[:,:,[2,1,0]]
+                # Added check for missing image
+                if img is None:
+                    print(f"Warning: Could not read image at {out_dir}")
+                    continue
+                img_rgb = img[:, :, [2, 1, 0]]
                 img_list.append(img_rgb)
 
-            return img_list[0],img_list[1],img_list[2],img_list[3],img_list[4]
+            return img_list[0], img_list[1], img_list[2], img_list[3], img_list[4]
 
 
 def get_segmentation(sample_folder, category):
     def getFileList(dir, Filelist, ext=None, skip=None, spec=None):
+        # Recursive file search (preserved as-is)
         newDir = dir
         if os.path.isfile(dir):
             if ext is None:
@@ -193,11 +197,12 @@ def get_segmentation(sample_folder, category):
         back1 = np.array([0, 0, 0])
         back2 = np.array([1, 1, 1])
         target_color = np.array([255, 255, 255])
-        image[np.all(image==back1, axis=2)] = target_color
-        image[np.all(image==back2, axis=2)] = target_color
+        image[np.all(image == back1, axis=2)] = target_color
+        image[np.all(image == back2, axis=2)] = target_color
 
         save_file = img.replace('Image', 'Image_white')
-        save_dir = save_file.rstrip(img_name)
+        # Modified: using os.path.dirname to get directory instead of rstrip
+        save_dir = os.path.dirname(save_file) + os.sep
         os.makedirs(save_dir, exist_ok=True)
 
         try:
@@ -205,6 +210,7 @@ def get_segmentation(sample_folder, category):
         except:
             pdb.set_trace()
 
+    # Use the last used directory (from the loop) to get seg_list
     seg_list = getFileList(save_dir, [], ext='png')
     config_path = os.path.join('./mmsegmentation/work_dir', category, f'3D_texture_{category}.py')
     checkpoint_path = os.path.join('./mmsegmentation/work_dir', category, 'ckpt.pth')
@@ -217,7 +223,9 @@ def get_segmentation(sample_folder, category):
         print('i = ', i)
         img_name = img.split('/')[-1]
 
-        save_dir = img.rstrip(img_name).replace('Image_white', 'predict')
+        # Modified: using os.path.dirname to extract the directory before replacing text
+        save_dir_local = os.path.dirname(img) + os.sep
+        save_dir = save_dir_local.replace('Image_white', 'predict')
         os.makedirs(save_dir, exist_ok=True)
 
         save_path = os.path.join(save_dir, img_name)
@@ -244,24 +252,25 @@ def get_segmentation(sample_folder, category):
         seg_rgb = seg[:, :, [2, 1, 0]]
         vis_list.append(seg_rgb)
 
-    return vis_list[0],vis_list[1],vis_list[2],vis_list[3],vis_list[4]
+    return vis_list[0], vis_list[1], vis_list[2], vis_list[3], vis_list[4]
 
 def render_to_uv(sample_folder, category):
     sample_folder = sample_folder.rstrip('/')
     sample = sample_folder.split('/')[-1]
 
+    # Save the current working directory and restore later to avoid side effects
+    original_dir = os.getcwd()
     os.chdir('./Text2Tex')
     cmd = f'python ./scripts/view_2_UV.py --cuda 2 --work_dir ../output/predict --sample_dir {sample_folder} --sample {sample} --img_size 512 --category {category}'
     os.system(cmd)
-
-    os.chdir('../')
+    os.chdir(original_dir)
 
     ORM_dir = os.path.join('./output/ORM/', sample, 'ORM.png')
 
     os.system('cp ' + ORM_dir + ' ' + sample_folder)
 
     ORM = cv2.imread(ORM_dir)
-    ORM_rgb = ORM[:,:,[2,1,0]]
+    ORM_rgb = ORM[:, :, [2, 1, 0]]
 
     return ORM_rgb
 
@@ -272,7 +281,7 @@ def display(sample_folder):
 
     for file in os.listdir(sample_folder):
         if file.endswith('png'):
-            uv = Image.open(os.path.join(sample_folder,file))
+            uv = Image.open(os.path.join(sample_folder, file))
 
     cmd = f'/path-to-MaterialSeg3D/blender-2.90.0-linux64/blender -b -P trans_glb.py -- --obj_file {sample_folder}'
 
@@ -366,7 +375,7 @@ with gr.Blocks(title="MaterialSeg3D") as interface:
         )
 
         with gr.Row():
-            raw_ue = gr.Image(interactive=False,label='Default UE setting without ORM UV')
+            raw_ue = gr.Image(interactive=False, label='Default UE setting without ORM UV')
             raw_car = gr.Image(interactive=False, label='Default display of the object')
 
         with gr.Row():
