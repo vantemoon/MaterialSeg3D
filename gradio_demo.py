@@ -383,37 +383,37 @@ with gr.Blocks(title="MaterialSeg3D") as interface:
             mat_car = gr.Image(interactive=False, label='object rendering with applying ORM UV')
 
 
-    # seg_btn.click(fn=display, inputs=[input_dir],outputs=[albedo_uv,input_mesh]).success(fn=get_rendering, inputs=[input_dir], outputs=[view_1,view_2,view_3,view_4,view_5]).success(
-    #     fn=get_segmentation, inputs=[input_dir, select_cat], outputs=[seg1,seg2,seg3,seg4,seg5])
-    # uv_btn.click(fn=render_to_uv, inputs=[input_dir, select_cat], outputs=[ORM]).success(fn=example, inputs=[input_dir], outputs=[mat_ue, mat_car, raw_ue, raw_car])
+    seg_btn.click(fn=display, inputs=[input_dir],outputs=[albedo_uv,input_mesh]).success(fn=get_rendering, inputs=[input_dir], outputs=[view_1,view_2,view_3,view_4,view_5]).success(
+        fn=get_segmentation, inputs=[input_dir, select_cat], outputs=[seg1,seg2,seg3,seg4,seg5])
+    uv_btn.click(fn=render_to_uv, inputs=[input_dir, select_cat], outputs=[ORM]).success(fn=example, inputs=[input_dir], outputs=[mat_ue, mat_car, raw_ue, raw_car])
 
     # Handle segmentation button clicks
-    seg_btn.click(
-        fn=display,
-        inputs=[input_dir],
-        outputs=[albedo_uv, input_mesh]
-    )
-    seg_btn.click(
-        fn=get_rendering,
-        inputs=[input_dir],
-        outputs=[view_1, view_2, view_3, view_4, view_5]
-    )
-    seg_btn.click(
-        fn=get_segmentation,
-        inputs=[input_dir, select_cat],
-        outputs=[seg1, seg2, seg3, seg4, seg5]
-    )
+    # seg_btn.click(
+    #     fn=display,
+    #     inputs=[input_dir],
+    #     outputs=[albedo_uv, input_mesh]
+    # )
+    # seg_btn.click(
+    #     fn=get_rendering,
+    #     inputs=[input_dir],
+    #     outputs=[view_1, view_2, view_3, view_4, view_5]
+    # )
+    # seg_btn.click(
+    #     fn=get_segmentation,
+    #     inputs=[input_dir, select_cat],
+    #     outputs=[seg1, seg2, seg3, seg4, seg5]
+    # )
 
-    # Handle UV button clicks
-    uv_btn.click(
-        fn=render_to_uv,
-        inputs=[input_dir, select_cat],
-        outputs=[ORM]
-    )
-    uv_btn.click(
-        fn=example,
-        inputs=[input_dir],
-        outputs=[mat_ue, mat_car, raw_ue, raw_car]
-    )
+    # # Handle UV button clicks
+    # uv_btn.click(
+    #     fn=render_to_uv,
+    #     inputs=[input_dir, select_cat],
+    #     outputs=[ORM]
+    # )
+    # uv_btn.click(
+    #     fn=example,
+    #     inputs=[input_dir],
+    #     outputs=[mat_ue, mat_car, raw_ue, raw_car]
+    # )
 
 interface.launch(share=True, debug=True)
