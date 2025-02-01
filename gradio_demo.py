@@ -407,4 +407,4 @@ with gr.Blocks(title="MaterialSeg3D") as interface:
         outputs=[mat_ue, mat_car, raw_ue, raw_car]
     )
 
-interface.launch(share=True, debug=True)
+interface.launch(server_name="0.0.0.0", server_port=7860)
