@@ -98,7 +98,8 @@ RUN pip install --no-cache-dir --upgrade pip wheel && \
     pip install --no-cache-dir setuptools==60.2.0 && \
     pip install --no-cache-dir \
         gradio==3.17.0 \
-        huggingface-hub==0.11.1 \
+        huggingface-hub==0.23.0 \
+        accelerate==0.31.0 \
         diffusers==0.7.2 \
         transformers==4.20.0 \
         numpy==1.21.6 && \
