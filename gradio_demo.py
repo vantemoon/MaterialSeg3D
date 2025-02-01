@@ -103,7 +103,8 @@ def get_rendering(sample_folder):
     for file in file_list:
         if file.endswith('.obj'):
 
-            cmd = f'./blender-2.90.0-linux64/blender -b -P ./GET3D/render_shapenet_data/render_shapenet.py -- --output ./output {os.path.join(sample_folder, file)} --scale 1 --views 41 --resolution 1024 >> tmp.out'
+            BLENDER_PATH = "/opt/blender-2.90.0-linux64/blender"
+            cmd = f'{BLENDER_PATH} -b -P ./GET3D/render_shapenet_data/render_shapenet.py -- --output ./output {os.path.join(sample_folder, file)} --scale 1 --views 41 --resolution 1024 >> tmp.out'
             os.system(cmd)
 
             img_list = []

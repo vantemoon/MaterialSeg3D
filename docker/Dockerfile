@@ -76,10 +76,20 @@ RUN tar -xf /tmp/blender.tar.xz -C /opt
 
 # Add Blender to PATH
 RUN ln -s /opt/blender-2.90.0-linux64/blender /usr/bin/blender
-
 RUN cd /opt/blender-2.90.0-linux64/2.90/python/bin
 RUN /opt/blender-2.90.0-linux64/2.90/python/bin/python3.7m -m ensurepip
 RUN /opt/blender-2.90.0-linux64/2.90/python/bin/python3.7m -m pip install numpy
+RUN rm -f /usr/bin/blender && ln -s /opt/blender-2.90.0-linux64/blender /usr/bin/blender
+
+# Install required Blender dependencies
+RUN apt update && apt install -y \
+    libxi6 \
+    libxrender1 \
+    libxfixes3 \
+    libxcursor1 \
+    libxxf86vm1 \
+    libgl1-mesa-glx \
+    libdbus-1-3
 
 # Install MMSegmentation
 WORKDIR /app
