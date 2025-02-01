@@ -234,8 +234,8 @@ os.makedirs(img_follder, exist_ok=True)
 # elevation_angle_list = elevation_angle_list * 80 - 40
 
 # 可以替换为指定视角npy的信息
-rotation_angle_list = np.load("/path-to-MaterialSeg3D/GET3D/rotation.npy")
-elevation_angle_list = np.load("/path-to-MaterialSeg3D/GET3D/elevation.npy")
+rotation_angle_list = np.load("/app/MaterialSeg3D/GET3D/rotation.npy")
+elevation_angle_list = np.load("/app/MaterialSeg3D/GET3D/elevation.npy")
 
 # np.save(os.path.join(camera_follder, 'rotation'), rotation_angle_list)
 # np.save(os.path.join(camera_follder, 'elevation'), elevation_angle_list)

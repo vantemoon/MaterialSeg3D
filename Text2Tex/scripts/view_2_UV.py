@@ -549,9 +549,9 @@ if __name__ == "__main__":
     # DEVICE = torch.device("cuda:2")
     DEVICE = torch.device(f"cuda:{args.cuda}")
     torch.cuda.set_device(DEVICE)
-    B = np.load("/path-to-MaterialSeg3D/Text2Tex/camera_angle/original_41.npy")
+    B = np.load("/app/MaterialSeg3D/Text2Tex/camera_angle/original_41.npy")
     
-    # work_dir = "/path-to-MaterialSeg3D/output/predict_mapping/"
+    # work_dir = "/app/MaterialSeg3D/output/predict_mapping/"
     work_dir = args.work_dir
     sample = args.sample
 
@@ -561,7 +561,7 @@ if __name__ == "__main__":
     # if sample in os.listdir("/home/ruitong_gan/3D/Text2Tex/work_dir/add/plant/UV/"):
     #     continue
     print('now the sample is ', sample)
-    # input_dir = os.path.join("/path-to-MaterialSeg3D/example/" , sample)
+    # input_dir = os.path.join("/app/MaterialSeg3D/example/" , sample)
     input_dir = args.sample_dir
     obj_file = sample + '.obj'
     inference_dir = os.path.join(work_dir, sample)
@@ -827,7 +827,7 @@ if __name__ == "__main__":
     ORM = np.zeros((h, w, 3))
     # pdb.set_trace()
 
-    f = open("/path-to-MaterialSeg3D/Text2Tex/camera_angle/all_14.pkl", 'rb')
+    f = open("/app/MaterialSeg3D/Text2Tex/camera_angle/all_14.pkl", 'rb')
     # pdb.set_trace()
     mapping_dict = pickle.load(f)
     # pdb.set_trace()
