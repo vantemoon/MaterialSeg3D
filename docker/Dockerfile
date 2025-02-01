@@ -73,6 +73,10 @@ RUN pip install opencv-python==4.5.4.58
 # Build Blender environment
 RUN wget https://ftp.halifax.rwth-aachen.de/blender/release/Blender2.90/blender-2.90.0-linux64.tar.xz -O /tmp/blender.tar.xz
 RUN tar -xf /tmp/blender.tar.xz -C /opt
+
+# Add Blender to PATH
+RUN ln -s /opt/blender-2.90.0-linux64/blender /usr/bin/blender
+
 RUN cd /opt/blender-2.90.0-linux64/2.90/python/bin
 RUN /opt/blender-2.90.0-linux64/2.90/python/bin/python3.7m -m ensurepip
 RUN /opt/blender-2.90.0-linux64/2.90/python/bin/python3.7m -m pip install numpy
@@ -97,12 +101,13 @@ RUN rmdir temp_dir
 RUN pip install --no-cache-dir --upgrade pip wheel && \
     pip install --no-cache-dir setuptools==60.2.0 && \
     pip install --no-cache-dir \
-        gradio==3.17.0 \
+        gradio==3.37.0 \
         huggingface-hub==0.23.0 \
         accelerate==0.31.0 \
         diffusers==0.7.2 \
         transformers==4.20.0 \
-        numpy==1.21.6 && \
+        numpy==1.22.4 \
+        torchmetrics==0.11.4 && \
     pip install --no-cache-dir \
         torch==1.12.1+cu113 torchvision==0.13.1+cu113 \
         -f https://download.pytorch.org/whl/torch_stable.html && \
