@@ -99,7 +99,8 @@ from lib.camera_helper import init_viewpoints
 
 # Setup
 if torch.cuda.is_available():
-    DEVICE = torch.device("cuda:2")
+    DEVICE_ID = torch.cuda.current_device()
+    DEVICE = torch.device(f"cuda:{DEVICE_ID}")
     torch.cuda.set_device(DEVICE)
 else:
     print("no gpu avaiable")
