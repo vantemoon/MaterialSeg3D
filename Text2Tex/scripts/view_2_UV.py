@@ -563,8 +563,8 @@ if __name__ == "__main__":
     # if sample in os.listdir("/home/ruitong_gan/3D/Text2Tex/work_dir/add/plant/UV/"):
     #     continue
     print('now the sample is ', sample)
-    # input_dir = os.path.join("/app/MaterialSeg3D/example/" , sample)
-    input_dir = args.sample_dir
+    input_dir = os.path.join("/app/MaterialSeg3D/example/" , sample)
+    # input_dir = args.sample_dir
     obj_file = sample + '.obj'
     inference_dir = os.path.join(work_dir, sample)
     UV_dir = inference_dir.replace('predict_mapping', 'UV')
