@@ -52,7 +52,8 @@ RUN conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoo
 RUN conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
 RUN conda install -c bottler nvidiacub nvidiacub -y
 RUN conda install pytorch3d -c pytorch3d -y
-RUN conda install xformers -c xformers -y
+# RUN conda install xformers -c xformers -y
+RUN conda install -c xformers -c conda-forge xformers=0.0.20 "pytorch=1.12.1=*cuda11.3*"
 RUN pip install -r /app/MaterialSeg3D/Text2Tex/requirements.txt
 WORKDIR /app/MaterialSeg3D
 
@@ -104,10 +105,10 @@ RUN cd /app/MaterialSeg3D/mmsegmentation && pip install -v -e .
 # Download the model weights from Google Drive and unzip the file
 RUN pip install gdown
 RUN gdown 'https://drive.google.com/uc?id=1R323ODbLvg1jjJ6cXoE364ZGyzFeZ_w0' -O weights.zip
-RUN unzip weights.zip -d temp_dir
+RUN unzip weights.zip -d /app/MaterialSeg3D/mmsegmentation/temp_dir
 RUN rm weights.zip
-RUN mv temp_dir/* ./work_dir
-RUN rmdir temp_dir
+RUN mv /app/MaterialSeg3D/mmsegmentation/temp_dir/* /app/MaterialSeg3D/mmsegmentation/work_dir
+RUN rmdir /app/MaterialSeg3D/mmsegmentation/temp_dir
 
 # Install specific versions of dependencies
 RUN pip install --no-cache-dir --upgrade pip wheel && \
