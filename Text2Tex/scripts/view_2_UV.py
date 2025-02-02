@@ -548,7 +548,8 @@ if __name__ == "__main__":
     # output_dir = args.output_dir
     view_num = 41
     # DEVICE = torch.device("cuda:2")
-    DEVICE = torch.device(f"cuda:{args.cuda}")
+    DEVICE_ID = torch.cuda.current_device()
+    DEVICE = torch.device(f"cuda:{DEVICE_ID}")
     torch.cuda.set_device(DEVICE)
     B = np.load("/app/MaterialSeg3D/Text2Tex/camera_angle/original_41.npy")
     
