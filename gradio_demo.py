@@ -213,8 +213,8 @@ def get_segmentation(sample_folder, category):
 
     # Use the last used directory (from the loop) to get seg_list
     seg_list = getFileList(save_dir, [], ext='png')
-    config_path = os.path.join('/app/work_dir', category, f'3D_texture_{category}.py')
-    checkpoint_path = os.path.join('/app/work_dir', category, 'ckpt.pth')
+    config_path = os.path.join('/app/MaterialSeg3D/mmsegmentation/work_dir', category, f'3D_texture_{category}.py')
+    checkpoint_path = os.path.join('/app/MaterialSeg3D/mmsegmentation/work_dir', category, 'ckpt.pth')
     model = init_model(config_path, checkpoint_path)
 
     print(len(seg_list))
