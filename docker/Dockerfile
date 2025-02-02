@@ -56,9 +56,11 @@ RUN conda install xformers -c xformers -y
 RUN pip install -r /app/MaterialSeg3D/Text2Tex/requirements.txt
 WORKDIR /app/MaterialSeg3D
 
-# Download the pre-trained depth file
-RUN mkdir -p /app/Tex2Tex/models/ControlNet/models
-RUN wget https://huggingface.co/lllyasviel/ControlNet/blob/main/models/control_sd15_depth.pth -O /app/Tex2Tex/models/ControlNet/models/control_sd15_depth.pth
+# Download the pre-trained depth model from Hugging Face
+RUN mkdir -p /app/Text2Tex/models/ControlNet/models
+RUN wget https://huggingface.co/lllyasviel/ControlNet/resolve/main/models/control_sd15_depth.pth \
+    -O /app/Text2Tex/models/ControlNet/models/control_sd15_depth.pth
+
 
 # Install GET3D dependencies
 RUN pip install ninja xatlas gdown

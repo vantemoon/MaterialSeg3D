@@ -9,6 +9,8 @@ from typing import Optional, Any
 from ldm.modules.attention import MemoryEfficientCrossAttention
 
 try:
+    import sys
+    sys.path.append('/opt/conda/envs/materialseg3d-env/lib/python3.9/site-packages')
     import xformers
     import xformers.ops
     XFORMERS_IS_AVAILBLE = True
