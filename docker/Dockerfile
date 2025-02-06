@@ -52,7 +52,8 @@ RUN conda install pytorch==1.13.0 torchvision==0.14.0 torchaudio==0.13.0 cudatoo
 RUN conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
 RUN conda install -c bottler nvidiacub -y
 RUN conda install -c iopath iopath -y
-RUN pip install pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu116/torch1.13.0/index.html
+RUN pip install --no-index --no-cache-dir pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu116_pyt1130/download.html
+
 RUN conda install xformers -c xformers
 
 RUN pip install -r /app/MaterialSeg3D/Text2Tex/requirements.txt
