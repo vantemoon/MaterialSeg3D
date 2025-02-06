@@ -567,7 +567,9 @@ if __name__ == "__main__":
     # input_dir = args.sample_dir
     obj_file = sample + '.obj'
     inference_dir = os.path.join(work_dir, sample)
-    UV_dir = inference_dir.replace('predict_mapping', 'UV')
+    # UV_dir = inference_dir.replace('predict_mapping', 'UV')
+    UV_dir = os.path.join("/app/MaterialSeg3D/output/UV", sample)
+    os.makedirs(UV_dir, exist_ok=True)
     image_list = os.listdir(inference_dir)
     # assert len(image_list) == view_num
 
@@ -822,8 +824,10 @@ if __name__ == "__main__":
     # cv2.imwrite(os.path.join(uv_dir, sample, 'region_UV.png'), predict_refine)
     print('save rgb!')
 
-    ORM_dir = UV_dir.replace('UV', 'ORM')
-    os.makedirs(os.path.join(ORM_dir, sample), exist_ok=True)
+    # ORM_dir = UV_dir.replace('UV', 'ORM')
+    # os.makedirs(os.path.join(ORM_dir, sample), exist_ok=True)
+    ORM_dir = os.path.join("/app/MaterialSeg3D/output/ORM", sample)
+    os.makedirs(ORM_dir, exist_ok=True)
 
     h, w = result_scale.shape
     ORM = np.zeros((h, w, 3))
