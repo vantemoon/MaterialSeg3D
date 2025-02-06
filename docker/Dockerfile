@@ -1,5 +1,5 @@
-# Use the NVIDIA CUDA base image with CUDA 11.3 and Ubuntu 20.04
-FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
+# Use the NVIDIA CUDA base image with CUDA 11.6 and Ubuntu 20.04
+FROM nvidia/cuda:11.6.2-cudnn8-devel-ubuntu20.04
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -48,12 +48,13 @@ RUN rm -f $CONDA_DIR/envs/materialseg3d-env/lib/libstdc++.so.6
 RUN git clone https://github.com/vantemoon/MaterialSeg3D.git
 
 # Install Tex2Tex dependencies
-RUN conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch -c nvidia -y
+RUN conda install pytorch==1.13.0 torchvision==0.14.0 torchaudio==0.13.0 cudatoolkit=11.6 -c pytorch -c nvidia -y
 RUN conda install -c fvcore -c iopath -c conda-forge fvcore iopath -y
-RUN conda install -c bottler nvidiacub nvidiacub -y
-RUN conda install pytorch3d -c pytorch3d -y
-# RUN conda install xformers -c xformers -y
-RUN conda install -c xformers -c conda-forge xformers=0.0.20 "pytorch=1.12.1=*cuda11.3*"
+RUN conda install -c bottler nvidiacub -y
+RUN conda install -c iopath iopath -y
+RUN pip install pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu116/torch1.13.0/index.html
+RUN conda install xformers -c xformers
+
 RUN pip install -r /app/MaterialSeg3D/Text2Tex/requirements.txt
 WORKDIR /app/MaterialSeg3D
 
@@ -66,11 +67,7 @@ RUN mkdir -p /app/MaterialSeg3D/Text2Tex/models/ControlNet/models && \
 RUN pip install ninja xatlas gdown
 RUN pip install git+https://github.com/NVlabs/nvdiffrast/
 RUN pip install meshzoo ipdb imageio gputil h5py point-cloud-utils imageio imageio-ffmpeg==0.4.4 pyspng==0.1.0
-RUN pip install urllib3
-RUN pip install scipy
-RUN pip install click
-RUN pip install tqdm
-RUN pip install opencv-python==4.5.4.58
+RUN pip install urllib3 scipy click tqdm opencv-python==4.5.4.58
 
 # Build Blender environment
 RUN wget https://ftp.halifax.rwth-aachen.de/blender/release/Blender2.90/blender-2.90.0-linux64.tar.xz -O /tmp/blender.tar.xz
@@ -97,8 +94,8 @@ RUN apt update && apt install -y \
 WORKDIR /app
 RUN pip install -U openmim
 RUN mim install mmengine
-# RUN mim install mmcv==2.1.0
-RUN pip install mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12/index.html
+RUN pip install mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu116/torch1.13/index.html
+
 RUN cd /app/MaterialSeg3D/mmsegmentation && pip install -v -e .
 
 # Download the model weights from Google Drive and unzip the file
@@ -121,10 +118,10 @@ RUN pip install --no-cache-dir --upgrade pip wheel && \
         numpy==1.22.4 \
         torchmetrics==0.11.4 && \
     pip install --no-cache-dir \
-        torch==1.12.1+cu113 torchvision==0.13.1+cu113 \
-        -f https://download.pytorch.org/whl/torch_stable.html && \
+        torch==1.13.0+cu116 torchaudio==0.13.0+cu116 torchvision==0.14.0+cu116 \
+        --index-url https://download.pytorch.org/whl/cu116 && \
     pip install --no-cache-dir \
-        pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu113_pyt1121/download.html
+        pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu116_pyt1130/download.html
 
 # Copy the entrypoint script and make it executable
 COPY entrypoint.sh /app/entrypoint.sh
