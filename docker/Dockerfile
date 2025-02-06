@@ -58,10 +58,9 @@ RUN pip install -r /app/MaterialSeg3D/Text2Tex/requirements.txt
 WORKDIR /app/MaterialSeg3D
 
 # Download the pre-trained depth model from Hugging Face
-RUN mkdir -p /app/Text2Tex/models/ControlNet/models
-RUN wget https://huggingface.co/lllyasviel/ControlNet/resolve/main/models/control_sd15_depth.pth \
-    -O /app/Text2Tex/models/ControlNet/models/control_sd15_depth.pth
-
+RUN mkdir -p /app/MaterialSeg3D/Text2Tex/models/ControlNet/models && \
+    wget --content-disposition "https://huggingface.co/lllyasviel/ControlNet/resolve/main/models/control_sd15_depth.pth" \
+    -O /app/MaterialSeg3D/Text2Tex/models/ControlNet/models/control_sd15_depth.pth
 
 # Install GET3D dependencies
 RUN pip install ninja xatlas gdown
