@@ -4,4 +4,5 @@ conda activate materialseg3d-env
 
 export USE_CUDA=1
 
+cd MaterialSeg3D
 exec gunicorn --workers=4 --bind=0.0.0.0:8080 api:app
