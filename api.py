@@ -8,6 +8,8 @@ import base64
 import numpy as np
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
+import tempfile
+import zipfile
 
 # Import mmsegmentation APIs and other libraries
 from mmseg.apis import init_model, inference_model
@@ -53,11 +55,20 @@ def pil_to_base64(img: Image.Image, fmt: str = "PNG") -> str:
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 def np_to_base64(np_img: np.ndarray, fmt: str = "PNG") -> str:
-    # Convert a numpy array (assumed to be in RGB) to a base64-encoded PNG string.
     im = Image.fromarray(np_img)
     buffered = io.BytesIO()
     im.save(buffered, format=fmt)
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+def extract_zip_file(zip_file) -> str:
+    """
+    Extracts the uploaded ZIP file to a temporary directory.
+    Returns the path to the extracted folder.
+    """
+    tmp_dir = tempfile.mkdtemp()
+    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+        zip_ref.extractall(tmp_dir)
+    return tmp_dir
 
 # ------------------
 # Workflow Functions
@@ -261,20 +272,19 @@ def example():
 @app.route('/display', methods=['POST'])
 def display_endpoint():
     """
-    Process the input sample folder to display the UV image and generate the mesh.
-    Expects JSON with parameter:
-      - sample_folder: Path to the folder containing the .obj file and images.
-    Returns a base64-encoded UV image and the mesh file path.
+    Expects a multipart/form-data request with:
+      - zip_file: the ZIP file containing OBJ, MTL, and PNG files.
+    Returns a base64-encoded UV image and the generated mesh file path.
     """
-    data = request.get_json()
-    sample_folder = data.get("sample_folder")
-    if not sample_folder:
-        return jsonify({"error": "Missing sample_folder parameter"}), 400
+    if 'zip_file' not in request.files:
+        return jsonify({"error": "Missing zip_file parameter"}), 400
+
+    zip_file = request.files['zip_file']
+    sample_folder = extract_zip_file(zip_file)
+
     try:
         uv, mesh_path = display(sample_folder)
-        uv_b64 = ""
-        if uv is not None:
-            uv_b64 = pil_to_base64(uv)
+        uv_b64 = pil_to_base64(uv) if uv is not None else ""
         return jsonify({"uv_image": uv_b64, "mesh_path": mesh_path})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -282,17 +292,18 @@ def display_endpoint():
 @app.route('/get_rendering', methods=['POST'])
 def get_rendering_endpoint():
     """
-    Render the 3D object from the sample folder.
-    Expects JSON with:
-      - sample_folder: Path to the folder.
+    Expects a multipart/form-data request with:
+      - zip_file: the ZIP file containing the necessary asset files.
     Returns five rendered views as base64-encoded images.
     """
-    data = request.get_json()
-    sample_folder = data.get("sample_folder")
-    if not sample_folder:
-        return jsonify({"error": "Missing sample_folder parameter"}), 400
+    if 'zip_file' not in request.files:
+        return jsonify({"error": "Missing zip_file parameter"}), 400
+
+    zip_file = request.files['zip_file']
+    sample_folder = extract_zip_file(zip_file)
+
     try:
-        imgs = get_rendering(sample_folder)
+        imgs = get_rendering(sample_folder)  # Returns a tuple of 5 numpy arrays
         imgs_b64 = [np_to_base64(img) for img in imgs]
         return jsonify({
             "view1": imgs_b64[0],
@@ -307,17 +318,20 @@ def get_rendering_endpoint():
 @app.route('/get_segmentation', methods=['POST'])
 def get_segmentation_endpoint():
     """
-    Run segmentation on the rendered images.
-    Expects JSON with:
-      - sample_folder: Path to the folder.
-      - category: The asset category (e.g. "car", "furniture", etc.)
+    Expects a multipart/form-data request with:
+      - zip_file: the ZIP file containing the necessary asset files.
+      - category: the asset category (e.g., "car", "furniture").
     Returns five segmentation images as base64-encoded strings.
     """
-    data = request.get_json()
-    sample_folder = data.get("sample_folder")
-    category = data.get("category")
-    if not sample_folder or not category:
-        return jsonify({"error": "Missing sample_folder or category parameter"}), 400
+    if 'zip_file' not in request.files:
+        return jsonify({"error": "Missing zip_file parameter"}), 400
+
+    zip_file = request.files['zip_file']
+    sample_folder = extract_zip_file(zip_file)
+    category = request.form.get("category")
+    if not category:
+        return jsonify({"error": "Missing category parameter"}), 400
+
     try:
         seg_imgs = get_segmentation(sample_folder, category)
         seg_imgs_b64 = [np_to_base64(img) for img in seg_imgs]
@@ -334,17 +348,20 @@ def get_segmentation_endpoint():
 @app.route('/render_to_uv', methods=['POST'])
 def render_to_uv_endpoint():
     """
-    Generate the ORM UV map.
-    Expects JSON with:
-      - sample_folder: Path to the folder.
-      - category: The asset category.
+    Expects a multipart/form-data request with:
+      - zip_file: the ZIP file containing the necessary asset files.
+      - category: the asset category.
     Returns the ORM UV map as a base64-encoded image.
     """
-    data = request.get_json()
-    sample_folder = data.get("sample_folder")
-    category = data.get("category")
-    if not sample_folder or not category:
-        return jsonify({"error": "Missing sample_folder or category parameter"}), 400
+    if 'zip_file' not in request.files:
+        return jsonify({"error": "Missing zip_file parameter"}), 400
+
+    zip_file = request.files['zip_file']
+    sample_folder = extract_zip_file(zip_file)
+    category = request.form.get("category")
+    if not category:
+        return jsonify({"error": "Missing category parameter"}), 400
+
     try:
         orm_img = render_to_uv(sample_folder, category)
         orm_b64 = np_to_base64(orm_img)
@@ -355,7 +372,7 @@ def render_to_uv_endpoint():
 @app.route('/example', methods=['GET'])
 def example_endpoint():
     """
-    Return example images for material generation.
+    Returns example images for material generation.
     """
     try:
         mat_ue, mat_car, raw_ue, raw_car = example()
@@ -368,22 +385,48 @@ def example_endpoint():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/download_mesh', methods=['GET'])
-def download_mesh_endpoint():
+@app.route('/download_material', methods=['GET'])
+def download_material_endpoint():
     """
-    Download the generated mesh file.
-    Expects query parameter:
-      - mesh_path: Local path of the generated mesh.
+    Download a zip file containing:
+      - the white model (OBJ file),
+      - the albedo texture (PNG file),
+      - the ORM map (PNG file)
+    Expects a query parameter:
+      - sample_folder: the folder containing these files.
     """
-    mesh_path = request.args.get("mesh_path")
-    if not mesh_path or not os.path.exists(mesh_path):
-        return jsonify({"error": "Mesh file not found"}), 404
-    return send_file(mesh_path, as_attachment=True,
-                     download_name=os.path.basename(mesh_path))
+    sample_folder =  request.args.get("sample_folder")
+    if not sample_folder or not os.path.exists(sample_folder):
+        return jsonify({"error": "Sample folder not found"}), 404
+
+    # Look for files: assume .obj file is the white model,
+    # the albedo texture is the first PNG file without "ORM" in its name,
+    # and the ORM map is a PNG file with "ORM" in its name.
+    obj_file = None
+    albedo_file = None
+    orm_file = None
+    for f in os.listdir(sample_folder):
+        if f.endswith('.obj'):
+            obj_file = os.path.join(sample_folder, f)
+        elif f.endswith('.png'):
+            if "ORM" in f:
+                orm_file = os.path.join(sample_folder, f)
+            else:
+                if not albedo_file:
+                    albedo_file = os.path.join(sample_folder, f)
+    if not obj_file or not albedo_file or not orm_file:
+        return jsonify({"error": "Required files not found"}), 404
+
+    zip_path = tempfile.NamedTemporaryFile(delete=False, suffix=".zip").name
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        zipf.write(obj_file, arcname=os.path.basename(obj_file))
+        zipf.write(albedo_file, arcname=os.path.basename(albedo_file))
+        zipf.write(orm_file, arcname=os.path.basename(orm_file))
+    return send_file(zip_path, as_attachment=True, download_name="material.zip", mimetype="application/zip")
 
 # ------------------
 # Main
 # ------------------
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7860, debug=True)
+    app.run(host="0.0.0.0", port=8080, debug=True)

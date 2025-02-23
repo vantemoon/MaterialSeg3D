@@ -130,7 +130,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Expose the port
-EXPOSE 7860
+EXPOSE 8080
 ENV GRADIO_SERVER_NAME="0.0.0.0"
 
 # Set the entrypoint
