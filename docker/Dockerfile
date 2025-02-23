@@ -125,6 +125,13 @@ RUN pip install --no-cache-dir --upgrade pip wheel && \
     pip install --no-cache-dir \
         pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py39_cu116_pyt1130/download.html
 
+# Install required packages for frone-end
+RUN pip install gunicorn
+RUN pip install flask
+RUN pip install flask-cors
+RUN pip install pillow
+RUN pip install rembg
+
 # Copy the entrypoint script and make it executable
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
