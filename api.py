@@ -11,6 +11,10 @@ from PIL import Image
 import tempfile
 import zipfile
 
+sys.path.append("./mmsegmentation")
+sys.path.append("./Text2Tex")
+sys.path.append("./GET3D")
+
 # Import mmsegmentation APIs and other libraries
 from mmseg.apis import init_model, inference_model
 import torch
