@@ -111,9 +111,7 @@ RUN rmdir /app/MaterialSeg3D/mmsegmentation/temp_dir
 # Install required packages for frone-end
 RUN pip install gunicorn
 RUN pip install flask
-RUN pip install flask-cors
 RUN pip install pillow
-RUN pip install rembg
 
 # Install specific versions of dependencies
 RUN pip install --no-cache-dir --upgrade pip wheel && \
@@ -125,7 +123,8 @@ RUN pip install --no-cache-dir --upgrade pip wheel && \
         diffusers==0.7.2 \
         transformers==4.20.0 \
         numpy==1.22.4 \
-        torchmetrics==0.11.4 && \
+        torchmetrics==0.11.4 \
+        opencv-python==4.5.5.64 && \
     pip install --no-cache-dir \
         torch==1.13.0+cu116 torchaudio==0.13.0+cu116 torchvision==0.14.0+cu116 \
         --index-url https://download.pytorch.org/whl/cu116 && \
