@@ -291,6 +291,9 @@ def display_endpoint():
         uv_b64 = pil_to_base64(uv) if uv is not None else ""
         return jsonify({"uv_image": uv_b64, "mesh_path": mesh_path})
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print("Display endpoint error:", error_details)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/get_rendering', methods=['POST'])
