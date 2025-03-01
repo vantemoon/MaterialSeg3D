@@ -242,13 +242,25 @@ def display(sample_folder: str):
     sample = sample_folder.split('/')[-1]
     uv = None
     for file in os.listdir(sample_folder):
-        if file.endswith('png'):
+        if file.endswith('.png'):
             uv = Image.open(os.path.join(sample_folder, file))
             break
     BLENDER_PATH = "/opt/blender-2.90.0-linux64/blender"
-    cmd = f'{BLENDER_PATH} -b -P trans_glb.py -- --obj_file {sample_folder}'
-    os.system(cmd)
+    cmd = [BLENDER_PATH, "-b", "-P", "trans_glb.py", "--", "--obj_file", sample_folder]
+    print("Running Blender command:", " ".join(cmd))
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        print("Blender stdout:", result.stdout)
+        print("Blender stderr:", result.stderr)
+    except subprocess.CalledProcessError as e:
+        print("Blender command failed with code", e.returncode)
+        print("Error output:", e.stderr)
+        raise Exception("Blender command failed; see logs for details.")
+    
     mesh_path = os.path.join(sample_folder, f'{sample}_raw.glb')
+    if not os.path.exists(mesh_path):
+        raise Exception(f"Mesh file '{mesh_path}' not found.")
+    
     return uv, mesh_path
 
 def example():
