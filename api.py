@@ -275,6 +275,7 @@ def example():
 
 @app.route('/display', methods=['POST'])
 def display_endpoint():
+    print("Display endpoint called.")
     data = request.get_json()
     sample_folder = data.get("sample_folder")
     if not sample_folder:
