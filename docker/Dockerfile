@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Install system dependencies
 ENV DEBIAN_FRONTEND=noninteractive
+RUN sudo apt clean
 RUN apt-get update && apt-get install -y \
     git \
     wget \
