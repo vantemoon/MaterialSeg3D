@@ -275,25 +275,21 @@ def example():
 
 @app.route('/display', methods=['POST'])
 def display_endpoint():
-    """
-    Expects a multipart/form-data request with:
-      - zip_file: the ZIP file containing OBJ, MTL, and PNG files.
-    Returns a base64-encoded UV image and the generated mesh file path.
-    """
-    if 'zip_file' not in request.files:
-        return jsonify({"error": "Missing zip_file parameter"}), 400
-
-    zip_file = request.files['zip_file']
-    sample_folder = extract_zip_file(zip_file)
-
+    data = request.get_json()
+    sample_folder = data.get("sample_folder")
+    if not sample_folder:
+        return jsonify({"error": "Missing sample_folder parameter"}), 400
     try:
+        if not os.path.exists(sample_folder):
+            raise Exception(f"Sample folder '{sample_folder}' does not exist.")
+        print("Display endpoint: sample_folder =", sample_folder)
+        print("Files in sample_folder:", os.listdir(sample_folder))
         uv, mesh_path = display(sample_folder)
         uv_b64 = pil_to_base64(uv) if uv is not None else ""
         return jsonify({"uv_image": uv_b64, "mesh_path": mesh_path})
     except Exception as e:
         import traceback
-        error_details = traceback.format_exc()
-        print("Display endpoint error:", error_details)
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/get_rendering', methods=['POST'])
