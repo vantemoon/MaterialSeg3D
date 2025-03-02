@@ -90,27 +90,46 @@ def get_rendering(sample_folder: str):
     sample_folder = sample_folder.rstrip('/')
     sample = sample_folder.split('/')[-1]
     file_list = os.listdir(sample_folder)
+    target_obj = None
     for file in file_list:
         if file.endswith('.obj'):
-            BLENDER_PATH = "/opt/blender-2.90.0-linux64/blender"
-            cmd = (f'{BLENDER_PATH} -b -P ./GET3D/render_shapenet_data/render_shapenet.py '
-                   f'-- --output ./output {os.path.join(sample_folder, file)} '
-                   f'--scale 1 --views 41 --resolution 1024 >> tmp.out')
-            os.system(cmd)
-            img_list = []
-            for i in range(5):
-                out_dir = os.path.join('./output/Image', sample, f'{sample}_{i}.png')
-                img = cv2.imread(out_dir)
-                if img is None:
-                    print(f"Warning: Could not read image at {out_dir}")
-                    continue
-                # Convert BGR to RGB
+            target_obj = os.path.join(sample_folder, file)
+            break
+    if not target_obj:
+        raise Exception("No .obj file found in the sample folder.")
+
+    BLENDER_PATH = "/opt/blender-2.90.0-linux64/blender"
+    output_base = "/shared/output"
+    os.makedirs(output_base, exist_ok=True)
+    render_folder = os.path.join(output_base, sample)
+    os.makedirs(render_folder, exist_ok=True)
+
+    blender_script = "/app/GET3D/render_shapenet_data/render_shapenet.py"
+    cmd = (f'{BLENDER_PATH} -b -P {blender_script} '
+           f'-- --output {render_folder} {target_obj} '
+           f'--scale 1 --views 41 --resolution 1024 >> /shared/tmp.out')
+    print("Running rendering command:", cmd)
+    ret = os.system(cmd)
+    print("Rendering command returned:", ret)
+
+    img_list = []
+    image_base = os.path.join(render_folder, "Image", sample)
+    for i in range(5):
+        out_file = f"{image_base}_{i}.png"
+        print("Looking for rendered image:", out_file)
+        if not os.path.exists(out_file):
+            print("Warning: Image not found:", out_file)
+        else:
+            img = cv2.imread(out_file)
+            if img is None:
+                print("Warning: Failed to read image:", out_file)
+            else:
+                # Convert BGR to RGB.
                 img_rgb = img[:, :, [2, 1, 0]]
                 img_list.append(img_rgb)
-            if len(img_list) < 5:
-                raise Exception("Not enough rendered images were produced.")
-            return img_list[0], img_list[1], img_list[2], img_list[3], img_list[4]
-    raise Exception("No .obj file found in the sample folder.")
+    if len(img_list) < 5:
+        raise Exception("Not enough rendered images were produced.")
+    return tuple(img_list)
 
 def get_segmentation(sample_folder: str, category: str):
     """
