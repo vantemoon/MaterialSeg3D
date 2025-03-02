@@ -112,6 +112,7 @@ RUN rmdir /app/MaterialSeg3D/mmsegmentation/temp_dir
 # Install required packages for frone-end
 RUN pip install gunicorn
 RUN pip install flask
+RUN pip install flask-cors
 RUN pip install pillow
 
 # Install specific versions of dependencies

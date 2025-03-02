@@ -7,7 +7,9 @@ import json
 import base64
 import numpy as np
 from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
 from PIL import Image
+import subprocess
 import tempfile
 import zipfile
 
@@ -48,6 +50,7 @@ palette = [[0, 0, 0], [244, 35, 232], [70, 70, 70], [102, 102, 156],
            [0, 60, 100], [0, 80, 100], [0, 0, 230], [119, 11, 32], [100, 100, 0]]
 
 app = Flask(__name__)
+CORS(app)
 
 # ------------------
 # Helper Functions
