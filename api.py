@@ -106,7 +106,7 @@ def get_rendering(sample_folder: str):
 
     blender_script = "/app/MaterialSeg3D/GET3D/render_shapenet_data/render_shapenet.py"
     cmd = (f'{BLENDER_PATH} -b -P {blender_script} '
-           f'-- --output {render_folder} {target_obj} '
+           f'-- --output_folder {render_folder} {target_obj} '
            f'--scale 1 --views 41 --resolution 1024 >> /shared/tmp.out')
     print("Running rendering command:", cmd)
     ret = os.system(cmd)
