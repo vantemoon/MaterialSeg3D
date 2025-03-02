@@ -311,16 +311,16 @@ def display_endpoint():
 
 @app.route('/get_rendering', methods=['POST'])
 def get_rendering_endpoint():
-    """
-    Expects a multipart/form-data request with:
-      - zip_file: the ZIP file containing the necessary asset files.
-    Returns five rendered views as base64-encoded images.
-    """
-    if 'zip_file' not in request.files:
-        return jsonify({"error": "Missing zip_file parameter"}), 400
-
-    zip_file = request.files['zip_file']
-    sample_folder = extract_zip_file(zip_file)
+    # First, try to get the zip file from request.files
+    if 'zip_file' in request.files:
+        zip_file = request.files['zip_file']
+        sample_folder = extract_zip_file(zip_file)
+    else:
+        # Otherwise, try to get it from the JSON payload
+        data = request.get_json(silent=True)
+        sample_folder = data.get("zip_file") if data else None
+        if not sample_folder:
+            return jsonify({"error": "Missing zip_file parameter"}), 400
 
     try:
         imgs = get_rendering(sample_folder)  # Returns a tuple of 5 numpy arrays
