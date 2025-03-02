@@ -112,23 +112,34 @@ def get_rendering(sample_folder: str):
     ret = os.system(cmd)
     print("Rendering command returned:", ret)
 
+    image_dir = os.path.join(render_folder, "Image")
+    if not os.path.exists(image_dir):
+        # If the "Image" folder doesn't exist, use the render_folder itself.
+        print("No 'Image' subfolder found; using render_folder as image directory.")
+        image_dir = render_folder
+    else:
+        print("'Image' subfolder found; using it as image directory.")
+
+    png_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.endswith('.png')]
+    png_files.sort()
+    print("Found PNG files:", png_files)
+
+    if len(png_files) < 5:
+        raise Exception("Not enough rendered images were produced. Found: " + str(len(png_files)))
+
     img_list = []
-    image_base = os.path.join(render_folder, "Image", sample)
-    for i in range(5):
-        out_file = f"{image_base}_{i}.png"
-        print("Looking for rendered image:", out_file)
-        if not os.path.exists(out_file):
-            print("Warning: Image not found:", out_file)
+    for f in png_files[:5]:
+        print("Loading image:", f)
+        img = cv2.imread(f)
+        if img is None:
+            print("Warning: Failed to read image", f)
         else:
-            img = cv2.imread(out_file)
-            if img is None:
-                print("Warning: Failed to read image:", out_file)
-            else:
-                # Convert BGR to RGB.
-                img_rgb = img[:, :, [2, 1, 0]]
-                img_list.append(img_rgb)
+            # Convert from BGR to RGB.
+            img_rgb = img[:, :, [2, 1, 0]]
+            img_list.append(img_rgb)
     if len(img_list) < 5:
-        raise Exception("Not enough rendered images were produced.")
+        raise Exception("Not enough rendered images were produced after reading files.")
+    
     return tuple(img_list)
 
 def get_segmentation(sample_folder: str, category: str):
