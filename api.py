@@ -59,7 +59,8 @@ CORS(app)
 def pil_to_base64(img: Image.Image, fmt: str = "PNG") -> str:
     buffered = io.BytesIO()
     img.save(buffered, format=fmt)
-    return base64.b64encode(buffered.getvalue()).decode("utf-8")
+    encoded = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    return f"data:image/{fmt.lower()};base64,{encoded}"
 
 def np_to_base64(np_img: np.ndarray, fmt: str = "PNG") -> str:
     im = Image.fromarray(np_img)
