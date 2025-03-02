@@ -104,21 +104,23 @@ def get_rendering(sample_folder: str):
     render_folder = os.path.join(output_base, sample)
     os.makedirs(render_folder, exist_ok=True)
 
+    render_folder = os.path.join(render_folder, "Image")
     blender_script = "/app/MaterialSeg3D/GET3D/render_shapenet_data/render_shapenet.py"
     cmd = (f'{BLENDER_PATH} -b -P {blender_script} '
-           f'-- --output_folder {render_folder} {target_obj} '
-           f'--scale 1 --views 41 --resolution 1024 >> /shared/tmp.out')
+       f'--output_folder {render_folder} {target_obj} '
+       f'--scale 1 --views 41 --resolution 1024 >> /shared/tmp.out')
     print("Running rendering command:", cmd)
     ret = os.system(cmd)
     print("Rendering command returned:", ret)
 
-    image_dir = os.path.join(render_folder, "Image")
-    if not os.path.exists(image_dir):
-        # If the "Image" folder doesn't exist, use the render_folder itself.
-        print("No 'Image' subfolder found; using render_folder as image directory.")
-        image_dir = render_folder
+    image_dir = None
+    image_dir_candidate = os.path.join(render_folder, "Image")
+    if os.path.exists(image_dir_candidate) and len(os.listdir(image_dir_candidate)) > 0:
+        print("'Image' subfolder found and is not empty; using it as image directory.")
+        image_dir = image_dir_candidate
     else:
-        print("'Image' subfolder found; using it as image directory.")
+        print("No 'Image' subfolder found or it is empty; using render_folder as image directory.")
+        image_dir = render_folder
 
     png_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.endswith('.png')]
     png_files.sort()
