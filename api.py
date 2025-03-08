@@ -112,18 +112,7 @@ def get_rendering(sample_folder: str):
     ret = os.system(cmd)
     print("Rendering command returned:", ret)
 
-    image_dir = None
-    image_dir_candidate = os.path.join(render_folder, "Image")
-    png_files_candidate = []
-    if os.path.exists(image_dir_candidate):
-        png_files_candidate = [f for f in os.listdir(image_dir_candidate) if f.lower().endswith('.png')]
-        print("Contents of candidate 'Image' folder:", os.listdir(image_dir_candidate))
-    if len(png_files_candidate) > 0:
-        print("'Image' subfolder found and is not empty; using it as image directory.")
-        image_dir = image_dir_candidate
-    else:
-        print("No 'Image' subfolder with PNG files found; using render_folder as image directory.")
-        image_dir = render_folder
+    image_dir = os.path.join(render_folder, 'Image', sample)
     png_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.lower().endswith('.png')]
     png_files.sort()
     print("Found PNG files:", png_files)
