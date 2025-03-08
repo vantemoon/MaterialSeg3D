@@ -204,6 +204,7 @@ def get_segmentation(sample_folder: str, category: str):
         image[np.all(image == back1, axis=2)] = target_color
         image[np.all(image == back2, axis=2)] = target_color
         save_file = os.path.join(save_dir, os.path.basename(img))
+        print("Saving image to", save_file)
         cv2.imwrite(save_file, image)
 
     seg_files = getFileList(save_dir, [], ext='png')
@@ -215,10 +216,12 @@ def get_segmentation(sample_folder: str, category: str):
             seg_list.append(seg_rgb)
 
     for i in range(5):
-        seg_result = os.path.join('./output/vis', sample, f'{sample}_{i}.png')
-        seg = cv2.imread(seg_result)
-        if seg is None:
-            raise Exception(f"Segmentation result not found: {seg_result}")
+        vis_dir = os.path.join('./output/vis', sample)
+        if not os.path.exists(vis_dir):
+            raise Exception(f"Segmentation directory not found: {vis_dir}")
+        else:
+            files_in_vis = os.listdir(vis_dir)
+            print("Contents of segmentation directory:", files_in_vis)
         seg_rgb = seg[:, :, [2, 1, 0]]
         seg_list.append(seg_rgb)
     
