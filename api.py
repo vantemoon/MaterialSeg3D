@@ -103,9 +103,7 @@ def get_rendering(sample_folder: str):
         raise Exception("No .obj file found in the sample folder.")
 
     BLENDER_PATH = "/opt/blender-2.90.0-linux64/blender"
-    output_base = "/shared/output"
-    os.makedirs(output_base, exist_ok=True)
-    render_folder = os.path.join(output_base, sample)
+    render_folder = "/shared/output"
     os.makedirs(render_folder, exist_ok=True)
 
     blender_script = "/app/MaterialSeg3D/GET3D/render_shapenet_data/render_shapenet.py"
@@ -119,7 +117,6 @@ def get_rendering(sample_folder: str):
     image_dir = os.path.join(render_folder, 'Image', sample)
     png_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.lower().endswith('.png')]
     png_files.sort(key=natural_key)
-    # print("Found PNG files:", png_files)
 
     if len(png_files) < 5:
         raise Exception("Not enough rendered images were produced. Found: " + str(len(png_files)))
@@ -147,13 +144,16 @@ def get_segmentation(sample_folder: str, category: str):
     def getFileList(dir, Filelist, ext=None, skip=None, spec=None):
         newDir = dir
         if os.path.isfile(dir):
-            if ext is None or dir.lower().endswith(ext):
+            if ext is None:
                 Filelist.append(dir)
+            else:
+                if ext in dir[-3:]:
+                    Filelist.append(dir)
         elif os.path.isdir(dir):
             for s in os.listdir(dir):
-                full_path = os.path.join(dir, s)
-                if os.path.isdir(full_path):
-                    getFileList(full_path, Filelist, ext, skip, spec)
+                if os.path.isdir(os.path.join(dir, s)):
+                    newDir = os.path.join(dir, s)
+                    getFileList(newDir, Filelist, ext, skip, spec)
                 else:
                     acpt = True
                     if skip is not None:
@@ -163,11 +163,20 @@ def get_segmentation(sample_folder: str, category: str):
                                 break
                     if not acpt:
                         continue
-                    sp = True
-                    if spec is not None:
-                        sp = any(speci in s for speci in spec)
-                    if sp:
-                        Filelist.append(full_path)
+                    else:
+                        sp = False
+                        if spec is not None:
+                            for speci in spec:
+                                if speci in s:
+                                    sp = True
+                                    break
+                        else:
+                            sp = True
+                        if not sp:
+                            continue
+                        else:
+                            newDir = os.path.join(dir, s)
+                            getFileList(newDir, Filelist, ext, skip, spec)
         return Filelist
 
     def to_rgb(label, palette):
@@ -185,15 +194,14 @@ def get_segmentation(sample_folder: str, category: str):
             image[image_base == i] = mapping[i]
         return image
 
+    # Update paths to use the mounted shared folder
     sample_folder = sample_folder.rstrip('/')
     sample = sample_folder.split('/')[-1]
 
-    save_dir = os.path.join('./output/Image_white', sample)
-    os.makedirs(save_dir, exist_ok=True)
-
-    render_dir = os.path.join('./output/Image', sample)
-    img_list = getFileList(render_dir, [], ext='png')
-
+    # Find the rendered images (from the first model) under /shared/output/Image/<sample>
+    img_list = getFileList(os.path.join('/shared/output/Image', sample), [], ext='png')
+    print("Getting images at path:", os.path.join('/shared/output/Image', sample))
+    # Process and save these images into /shared/output/Image_white/<sample>
     for img in img_list:
         image = cv2.imread(img)
         if image is None:
@@ -203,32 +211,64 @@ def get_segmentation(sample_folder: str, category: str):
         target_color = np.array([255, 255, 255])
         image[np.all(image == back1, axis=2)] = target_color
         image[np.all(image == back2, axis=2)] = target_color
-        save_file = os.path.join(save_dir, os.path.basename(img))
-        print("Saving image to", save_file)
+        # Replace "Image" with "Image_white" in the path
+        save_file = img.replace('Image', 'Image_white')
+        save_dir = os.path.dirname(save_file) + os.sep
+        print("Saving processed image to:", save_file)
+        os.makedirs(save_dir, exist_ok=True)
         cv2.imwrite(save_file, image)
 
-    seg_files = getFileList(save_dir, [], ext='png')
-    seg_list = []
-    for f in seg_files:
-        seg = cv2.imread(f)
-        if seg is not None:
-            seg_rgb = seg[:, :, [2, 1, 0]]  # Convert from BGR to RGB.
-            seg_list.append(seg_rgb)
+    # Use the directory where processed images were saved
+    seg_list = getFileList(save_dir, [], ext='png')
 
+    # Initialize segmentation model using paths unchanged
+    config_path = os.path.join('/app/MaterialSeg3D/mmsegmentation/work_dir', category, f'3D_texture_{category}.py')
+    checkpoint_path = os.path.join('/app/MaterialSeg3D/mmsegmentation/work_dir', category, 'ckpt.pth')
+    model = init_model(config_path, checkpoint_path)
+
+    print("Number of processed images:", len(seg_list))
+    i = 0
+    # For each processed image, run segmentation and save outputs
+    for img in seg_list:
+        img_name = os.path.basename(img)
+        save_dir_local = os.path.dirname(img) + os.sep
+        # Replace "Image_white" with "predict" for intermediate segmentation outputs
+        save_dir_predict = save_dir_local.replace('Image_white', 'predict')
+        print("Predicted segmentation will be saved to:", save_dir_predict)
+        os.makedirs(save_dir_predict, exist_ok=True)
+        save_path = os.path.join(save_dir_predict, img_name)
+
+        # Also define a directory for visualizations (segmentation overlays)
+        visual_dir = save_dir_predict.replace('predict', 'vis')
+        print("Visualization images will be saved to:", visual_dir)
+        visual_path = save_path.replace('predict', 'vis')
+        os.makedirs(visual_dir, exist_ok=True)
+
+        result = inference_model(model, img)
+        predict = result.pred_sem_seg.data
+        save_pred = np.squeeze(predict.cpu().numpy())
+        # Assume "mapping" and "palette" are defined elsewhere in your code
+        save_mapping = transfer2(save_pred, mapping)
+        cv2.imwrite(save_path, save_mapping)
+
+        vis_img = to_rgb(save_pred, palette)
+        cv2.imwrite(visual_path, vis_img)
+        i += 1
+
+    # Now load segmentation visualization images from /shared/output/vis/<sample>
+    vis_list = []
     for i in range(5):
-        vis_dir = os.path.join('./output/vis', sample)
-        if not os.path.exists(vis_dir):
-            raise Exception(f"Segmentation directory not found: {vis_dir}")
-        else:
-            files_in_vis = os.listdir(vis_dir)
-            print("Contents of segmentation directory:", files_in_vis)
+        seg_result = os.path.join('/shared/output/vis', sample, f'{sample}_{i}.png')
+        seg = cv2.imread(seg_result)
+        if seg is None:
+            raise Exception(f"Segmentation result not found: {seg_result}")
         seg_rgb = seg[:, :, [2, 1, 0]]
-        seg_list.append(seg_rgb)
-    
-    if len(seg_list) < 5:
+        vis_list.append(seg_rgb)
+
+    if len(vis_list) < 5:
         raise Exception("Not enough segmentation images produced.")
     
-    return seg_list[0], seg_list[1], seg_list[2], seg_list[3], seg_list[4]
+    return vis_list[0], vis_list[1], vis_list[2], vis_list[3], vis_list[4]
 
 def render_to_uv(sample_folder: str, category: str):
     """
