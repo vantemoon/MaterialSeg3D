@@ -1,6 +1,7 @@
 import os
 import sys
 import io
+import re
 import time
 import cv2
 import json
@@ -78,6 +79,9 @@ def extract_zip_file(zip_file) -> str:
         zip_ref.extractall(tmp_dir)
     return tmp_dir
 
+def natural_key(string):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split('(\d+)', string)]
+
 # ------------------
 # Workflow Functions
 # ------------------
@@ -114,7 +118,7 @@ def get_rendering(sample_folder: str):
 
     image_dir = os.path.join(render_folder, 'Image', sample)
     png_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.lower().endswith('.png')]
-    png_files.sort()
+    png_files.sort(key=natural_key)
     # print("Found PNG files:", png_files)
 
     if len(png_files) < 5:
