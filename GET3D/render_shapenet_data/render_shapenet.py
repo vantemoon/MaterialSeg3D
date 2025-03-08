@@ -255,6 +255,7 @@ for i in range(0, args.views):
     cam_empty.rotation_euler[0] = math.radians(elevation_angle_list[i])
     # 其他渲染相关的操作
     render_file_path = os.path.join(img_follder, model_identifier+'_%01d.png' % (i))
+    print(f"Rendering view {i} to {render_file_path}")
     scene.render.filepath = render_file_path
     bpy.ops.render.render(write_still=True)
     bpy.context.view_layer.update()
