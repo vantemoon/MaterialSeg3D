@@ -147,13 +147,13 @@ def get_segmentation(sample_folder: str, category: str):
     def getFileList(dir, Filelist, ext=None, skip=None, spec=None):
         newDir = dir
         if os.path.isfile(dir):
-            if ext is None or dir.endswith(ext):
+            if ext is None or dir.lower().endswith(ext):
                 Filelist.append(dir)
         elif os.path.isdir(dir):
             for s in os.listdir(dir):
-                if os.path.isdir(os.path.join(dir, s)):
-                    newDir = os.path.join(dir, s)
-                    getFileList(newDir, Filelist, ext, skip, spec)
+                full_path = os.path.join(dir, s)
+                if os.path.isdir(full_path):
+                    getFileList(full_path, Filelist, ext, skip, spec)
                 else:
                     acpt = True
                     if skip is not None:
@@ -163,20 +163,11 @@ def get_segmentation(sample_folder: str, category: str):
                                 break
                     if not acpt:
                         continue
-                    else:
-                        sp = False
-                        if spec is not None:
-                            for speci in spec:
-                                if speci in s:
-                                    sp = True
-                                    break
-                        else:
-                            sp = True
-                        if not sp:
-                            continue
-                        else:
-                            newDir = os.path.join(dir, s)
-                            getFileList(newDir, Filelist, ext, skip, spec)
+                    sp = True
+                    if spec is not None:
+                        sp = any(speci in s for speci in spec)
+                    if sp:
+                        Filelist.append(full_path)
         return Filelist
 
     def to_rgb(label, palette):
@@ -196,52 +187,45 @@ def get_segmentation(sample_folder: str, category: str):
 
     sample_folder = sample_folder.rstrip('/')
     sample = sample_folder.split('/')[-1]
-    img_list = getFileList(os.path.join('./output/Image/', sample), [], ext='png')
+
+    save_dir = os.path.join('./output/Image_white', sample)
+    os.makedirs(save_dir, exist_ok=True)
+
+    render_dir = os.path.join('./output/Image', sample)
+    img_list = getFileList(render_dir, [], ext='png')
+
     for img in img_list:
         image = cv2.imread(img)
+        if image is None:
+            continue
         back1 = np.array([0, 0, 0])
         back2 = np.array([1, 1, 1])
         target_color = np.array([255, 255, 255])
         image[np.all(image == back1, axis=2)] = target_color
         image[np.all(image == back2, axis=2)] = target_color
-        save_file = img.replace('Image', 'Image_white')
-        save_dir = os.path.dirname(save_file) + os.sep
-        os.makedirs(save_dir, exist_ok=True)
+        save_file = os.path.join(save_dir, os.path.basename(img))
         cv2.imwrite(save_file, image)
-    seg_list = getFileList(save_dir, [], ext='png')
-    config_path = os.path.join('/app/MaterialSeg3D/mmsegmentation/work_dir', category, f'3D_texture_{category}.py')
-    checkpoint_path = os.path.join('/app/MaterialSeg3D/mmsegmentation/work_dir', category, 'ckpt.pth')
-    model = init_model(config_path, checkpoint_path)
-    print("Number of segmentation files:", len(seg_list))
-    i = 0
-    for img in seg_list:
-        save_dir_local = os.path.dirname(img) + os.sep
-        save_dir_pred = save_dir_local.replace('Image_white', 'predict')
-        os.makedirs(save_dir_pred, exist_ok=True)
-        img_name = os.path.basename(img)
-        save_path = os.path.join(save_dir_pred, img_name)
-        visual_dir = save_dir_local.replace('Image_white', 'vis')
-        os.makedirs(visual_dir, exist_ok=True)
-        visual_path = os.path.join(visual_dir, img_name)
-        result = inference_model(model, img)
-        predict = result.pred_sem_seg.data
-        save_pred = np.squeeze(predict.cpu().numpy())
-        save_mapping = transfer2(save_pred, mapping)
-        cv2.imwrite(save_path, save_mapping)
-        vis_img = to_rgb(save_pred, palette)
-        cv2.imwrite(visual_path, vis_img)
-        i += 1
-    vis_list = []
+
+    seg_files = getFileList(save_dir, [], ext='png')
+    seg_list = []
+    for f in seg_files:
+        seg = cv2.imread(f)
+        if seg is not None:
+            seg_rgb = seg[:, :, [2, 1, 0]]  # Convert from BGR to RGB.
+            seg_list.append(seg_rgb)
+
     for i in range(5):
         seg_result = os.path.join('./output/vis', sample, f'{sample}_{i}.png')
         seg = cv2.imread(seg_result)
         if seg is None:
             raise Exception(f"Segmentation result not found: {seg_result}")
         seg_rgb = seg[:, :, [2, 1, 0]]
-        vis_list.append(seg_rgb)
-    if len(vis_list) < 5:
+        seg_list.append(seg_rgb)
+    
+    if len(seg_list) < 5:
         raise Exception("Not enough segmentation images produced.")
-    return vis_list[0], vis_list[1], vis_list[2], vis_list[3], vis_list[4]
+    
+    return seg_list[0], seg_list[1], seg_list[2], seg_list[3], seg_list[4]
 
 def render_to_uv(sample_folder: str, category: str):
     """
