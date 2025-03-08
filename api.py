@@ -115,7 +115,7 @@ def get_rendering(sample_folder: str):
     image_dir = os.path.join(render_folder, 'Image', sample)
     png_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.lower().endswith('.png')]
     png_files.sort()
-    print("Found PNG files:", png_files)
+    # print("Found PNG files:", png_files)
 
     if len(png_files) < 5:
         raise Exception("Not enough rendered images were produced. Found: " + str(len(png_files)))
@@ -360,20 +360,13 @@ def get_rendering_endpoint():
 
 @app.route('/get_segmentation', methods=['POST'])
 def get_segmentation_endpoint():
-    """
-    Expects a multipart/form-data request with:
-      - zip_file: the ZIP file containing the necessary asset files.
-      - category: the asset category (e.g., "car", "furniture").
-    Returns five segmentation images as base64-encoded strings.
-    """
-    if 'zip_file' not in request.files:
-        return jsonify({"error": "Missing zip_file parameter"}), 400
-
-    zip_file = request.files['zip_file']
-    sample_folder = extract_zip_file(zip_file)
-    category = request.form.get("category")
-    if not category:
-        return jsonify({"error": "Missing category parameter"}), 400
+    data = request.get_json(force=True)
+    print("Received JSON for segmentation:", data)
+    
+    sample_folder = data.get("zip_file")
+    category = data.get("category")
+    if not sample_folder or not category:
+        return jsonify({"error": "Missing zip_file or category parameter"}), 400
 
     try:
         seg_imgs = get_segmentation(sample_folder, category)
@@ -386,6 +379,8 @@ def get_segmentation_endpoint():
             "seg5": seg_imgs_b64[4],
         })
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/render_to_uv', methods=['POST'])
