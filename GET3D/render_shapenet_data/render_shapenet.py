@@ -218,6 +218,7 @@ model_identifier = os.path.split(os.path.split(args.obj)[0])[1]
 synset_idx = args.obj.split('/')[-3]
 
 img_follder = os.path.join(os.path.abspath(args.output_folder), 'Image', model_identifier)
+print("Image folder: ", img_follder)
 # camera_follder = os.path.join(os.path.abspath(args.output_folder), 'camera',  model_identifier)
 
 os.makedirs(img_follder, exist_ok=True)
