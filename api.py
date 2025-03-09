@@ -106,7 +106,7 @@ def get_rendering(sample_folder: str):
 
     BLENDER_PATH = "/opt/blender-2.90.0-linux64/blender"
     # Use the shared folder for output.
-    render_folder = "/shared/output/" + sample
+    render_folder = "/shared/output/"
     os.makedirs(render_folder, exist_ok=True)
 
     blender_script = "/app/MaterialSeg3D/GET3D/render_shapenet_data/render_shapenet.py"
