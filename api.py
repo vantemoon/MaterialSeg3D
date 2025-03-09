@@ -7,7 +7,7 @@ import cv2
 import json
 import base64
 import numpy as np
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from PIL import Image
 import subprocess
@@ -50,7 +50,7 @@ palette = [[0, 0, 0], [244, 35, 232], [70, 70, 70], [102, 102, 156],
            [220, 20, 60], [255, 0, 0], [0, 0, 142], [0, 0, 70],
            [0, 60, 100], [0, 80, 100], [0, 0, 230], [119, 11, 32], [100, 100, 0]]
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static', static_folder='/shared')
 CORS(app)
 
 # ------------------
@@ -90,6 +90,8 @@ def get_rendering(sample_folder: str):
     """
     Runs a Blender-based rendering on the .obj file in the sample_folder.
     Returns five rendered views as numpy arrays (RGB).
+    Assumes that the rendered images are stored under:
+      /shared/output/Image/<sample>/<any PNG files>
     """
     sample_folder = sample_folder.rstrip('/')
     sample = sample_folder.split('/')[-1]
@@ -103,20 +105,37 @@ def get_rendering(sample_folder: str):
         raise Exception("No .obj file found in the sample folder.")
 
     BLENDER_PATH = "/opt/blender-2.90.0-linux64/blender"
-    render_folder = "/shared/output"
+    # Use the shared folder for output.
+    render_folder = "/shared/output/" + sample
     os.makedirs(render_folder, exist_ok=True)
 
     blender_script = "/app/MaterialSeg3D/GET3D/render_shapenet_data/render_shapenet.py"
+    # Note: The '--' separator ensures the arguments are passed to the script.
     cmd = (f'{BLENDER_PATH} -b -P {blender_script} '
-       f'-- --output_folder {render_folder} {target_obj} '
-       f'--scale 1 --views 41 --resolution 1024 >> /shared/tmp.out')
+           f'-- --output_folder {render_folder} {target_obj} '
+           f'--scale 1 --views 41 --resolution 1024 >> /shared/tmp.out')
     print("Running rendering command:", cmd)
     ret = os.system(cmd)
     print("Rendering command returned:", ret)
 
+    # Look for images in the expected subfolder.
     image_dir = os.path.join(render_folder, 'Image', sample)
+    if not os.path.exists(image_dir):
+        # Fall back: maybe the images are stored directly in render_folder.
+        print("No 'Image' subfolder found; using render_folder as image directory.")
+        image_dir = render_folder
+    else:
+        # Even if the folder exists, check that it contains PNG files.
+        if len([f for f in os.listdir(image_dir) if f.lower().endswith('.png')]) == 0:
+            print("'Image' subfolder is empty; using render_folder as image directory.")
+            image_dir = render_folder
+        else:
+            print("'Image' subfolder found and not empty; using it as image directory.")
+
+    # List and sort PNG files naturally.
     png_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.lower().endswith('.png')]
     png_files.sort(key=natural_key)
+    print("Found PNG files:", png_files)
 
     if len(png_files) < 5:
         raise Exception("Not enough rendered images were produced. Found: " + str(len(png_files)))
@@ -140,7 +159,16 @@ def get_segmentation(sample_folder: str, category: str):
     """
     Runs segmentation on the rendered images.
     Returns five segmentation visualization images as numpy arrays (RGB).
+    This function:
+      1. Recursively collects PNG files from the rendered images stored at:
+         /shared/output/Image/<sample>/
+      2. Processes them (replacing black/white backgrounds) and saves them to:
+         /shared/output/Image_white/<sample>/
+      3. Runs the segmentation model on these processed images, writing outputs to:
+         /shared/output/predict and then visualizations to /shared/output/vis/<sample>/
+      4. Loads and returns the first five visualization images.
     """
+    # Helper recursive file search function.
     def getFileList(dir, Filelist, ext=None, skip=None, spec=None):
         newDir = dir
         if os.path.isfile(dir):
@@ -194,14 +222,17 @@ def get_segmentation(sample_folder: str, category: str):
             image[image_base == i] = mapping[i]
         return image
 
-    # Update paths to use the mounted shared folder
     sample_folder = sample_folder.rstrip('/')
     sample = sample_folder.split('/')[-1]
 
-    # Find the rendered images (from the first model) under /shared/output/Image/<sample>
-    img_list = getFileList(os.path.join('/shared/output/Image', sample), [], ext='png')
-    print("Getting images at path:", os.path.join('/shared/output/Image', sample))
-    # Process and save these images into /shared/output/Image_white/<sample>
+    # Find rendered images from the first model in /shared/output/Image/<sample>
+    rendered_dir = os.path.join('/shared/output/Image', sample)
+    img_list = getFileList(rendered_dir, [], ext='png')
+    print("Getting images from:", rendered_dir)
+    
+    # Process these images and save into /shared/output/Image_white/<sample>
+    save_dir = os.path.join('/shared/output/Image_white', sample)
+    os.makedirs(save_dir, exist_ok=True)
     for img in img_list:
         image = cv2.imread(img)
         if image is None:
@@ -211,43 +242,43 @@ def get_segmentation(sample_folder: str, category: str):
         target_color = np.array([255, 255, 255])
         image[np.all(image == back1, axis=2)] = target_color
         image[np.all(image == back2, axis=2)] = target_color
-        # Replace "Image" with "Image_white" in the path
-        save_file = img.replace('Image', 'Image_white')
-        save_dir = os.path.dirname(save_file) + os.sep
+        # Replace "Image" with "Image_white" in the path.
+        save_file = img.replace('/Image/', '/Image_white/')
+        save_dir_local = os.path.dirname(save_file) + os.sep
+        os.makedirs(save_dir_local, exist_ok=True)
         print("Saving processed image to:", save_file)
-        os.makedirs(save_dir, exist_ok=True)
         cv2.imwrite(save_file, image)
 
-    # Use the directory where processed images were saved
+    # Use the directory where processed images were saved.
     seg_list = getFileList(save_dir, [], ext='png')
 
-    # Initialize segmentation model using paths unchanged
+    # Initialize the segmentation model.
     config_path = os.path.join('/app/MaterialSeg3D/mmsegmentation/work_dir', category, f'3D_texture_{category}.py')
     checkpoint_path = os.path.join('/app/MaterialSeg3D/mmsegmentation/work_dir', category, 'ckpt.pth')
     model = init_model(config_path, checkpoint_path)
 
     print("Number of processed images:", len(seg_list))
     i = 0
-    # For each processed image, run segmentation and save outputs
+    # For each processed image, run segmentation and save outputs.
     for img in seg_list:
         img_name = os.path.basename(img)
         save_dir_local = os.path.dirname(img) + os.sep
-        # Replace "Image_white" with "predict" for intermediate segmentation outputs
+        # Replace "Image_white" with "predict" for intermediate segmentation outputs.
         save_dir_predict = save_dir_local.replace('Image_white', 'predict')
-        print("Predicted segmentation will be saved to:", save_dir_predict)
+        print("Saving segmentation prediction to:", save_dir_predict)
         os.makedirs(save_dir_predict, exist_ok=True)
         save_path = os.path.join(save_dir_predict, img_name)
 
-        # Also define a directory for visualizations (segmentation overlays)
+        # Also define a directory for visualizations (segmentation overlays).
         visual_dir = save_dir_predict.replace('predict', 'vis')
-        print("Visualization images will be saved to:", visual_dir)
+        print("Saving segmentation visualization to:", visual_dir)
         visual_path = save_path.replace('predict', 'vis')
         os.makedirs(visual_dir, exist_ok=True)
 
         result = inference_model(model, img)
         predict = result.pred_sem_seg.data
         save_pred = np.squeeze(predict.cpu().numpy())
-        # Assume "mapping" and "palette" are defined elsewhere in your code
+        # 'mapping' should be defined globally or imported.
         save_mapping = transfer2(save_pred, mapping)
         cv2.imwrite(save_path, save_mapping)
 
@@ -256,19 +287,26 @@ def get_segmentation(sample_folder: str, category: str):
         i += 1
 
     # Now load segmentation visualization images from /shared/output/vis/<sample>
+    vis_dir = os.path.join('/shared/output/vis', sample)
+    if not os.path.exists(vis_dir):
+        raise Exception(f"Segmentation directory not found: {vis_dir}")
+    files_in_vis = os.listdir(vis_dir)
+    print("Contents of segmentation directory:", files_in_vis)
+    vis_files = [os.path.join(vis_dir, f) for f in files_in_vis if f.lower().endswith('.png')]
+    vis_files.sort(key=natural_key)
+    
+    if len(vis_files) < 5:
+        raise Exception("Not enough segmentation images produced. Found: " + str(len(vis_files)))
+    
     vis_list = []
-    for i in range(5):
-        seg_result = os.path.join('/shared/output/vis', sample, f'{sample}_{i}.png')
-        seg = cv2.imread(seg_result)
+    for f in vis_files[:5]:
+        seg = cv2.imread(f)
         if seg is None:
-            raise Exception(f"Segmentation result not found: {seg_result}")
+            raise Exception(f"Segmentation result not found or could not be read: {f}")
         seg_rgb = seg[:, :, [2, 1, 0]]
         vis_list.append(seg_rgb)
-
-    if len(vis_list) < 5:
-        raise Exception("Not enough segmentation images produced.")
     
-    return vis_list[0], vis_list[1], vis_list[2], vis_list[3], vis_list[4]
+    return tuple(vis_list)
 
 def render_to_uv(sample_folder: str, category: str):
     """
@@ -365,26 +403,29 @@ def display_endpoint():
 
 @app.route('/get_rendering', methods=['POST'])
 def get_rendering_endpoint():
-    # First, try to get the zip file from request.files
     if 'zip_file' in request.files:
         zip_file = request.files['zip_file']
         sample_folder = extract_zip_file(zip_file)
     else:
-        # Otherwise, try to get it from the JSON payload
         data = request.get_json(silent=True)
         sample_folder = data.get("zip_file") if data else None
         if not sample_folder:
             return jsonify({"error": "Missing zip_file parameter"}), 400
 
     try:
-        imgs = get_rendering(sample_folder)  # Returns a tuple of 5 numpy arrays
-        imgs_b64 = [np_to_base64(img) for img in imgs]
+        rendered_images = get_rendering(sample_folder)
+        sample = sample_folder.rstrip('/').split('/')[-1]
+
+        urls = []
+        for i in range(5):
+            url = f"http://localhost:8080/static/output/vis/{sample}/{sample}_{i}.png"
+            urls.append(url)
         return jsonify({
-            "view1": imgs_b64[0],
-            "view2": imgs_b64[1],
-            "view3": imgs_b64[2],
-            "view4": imgs_b64[3],
-            "view5": imgs_b64[4],
+            "view1": urls[0],
+            "view2": urls[1],
+            "view3": urls[2],
+            "view4": urls[3],
+            "view5": urls[4],
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -392,8 +433,6 @@ def get_rendering_endpoint():
 @app.route('/get_segmentation', methods=['POST'])
 def get_segmentation_endpoint():
     data = request.get_json(force=True)
-    print("Received JSON for segmentation:", data)
-    
     sample_folder = data.get("zip_file")
     category = data.get("category")
     if not sample_folder or not category:
@@ -401,13 +440,17 @@ def get_segmentation_endpoint():
 
     try:
         seg_imgs = get_segmentation(sample_folder, category)
-        seg_imgs_b64 = [np_to_base64(img) for img in seg_imgs]
+        sample = sample_folder.rstrip('/').split('/')[-1]
+        urls = []
+        for i in range(5):
+            url = f"http://localhost:8080/static/output/vis/{sample}/{sample}_{i}.png"
+            urls.append(url)
         return jsonify({
-            "seg1": seg_imgs_b64[0],
-            "seg2": seg_imgs_b64[1],
-            "seg3": seg_imgs_b64[2],
-            "seg4": seg_imgs_b64[3],
-            "seg5": seg_imgs_b64[4],
+            "seg1": urls[0],
+            "seg2": urls[1],
+            "seg3": urls[2],
+            "seg4": urls[3],
+            "seg5": urls[4],
         })
     except Exception as e:
         import traceback
