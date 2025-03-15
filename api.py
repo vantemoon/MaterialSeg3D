@@ -121,7 +121,6 @@ def get_rendering(sample_folder: str):
     # Look for images in the expected subfolder.
     image_dir = os.path.join(render_folder, 'Image', sample)
     if not os.path.exists(image_dir):
-        # Fall back: maybe the images are stored directly in render_folder.
         print("No 'Image' subfolder found; using render_folder as image directory.")
         image_dir = render_folder
     else:
@@ -132,7 +131,6 @@ def get_rendering(sample_folder: str):
         else:
             print("'Image' subfolder found and not empty; using it as image directory.")
 
-    # List and sort PNG files naturally.
     png_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.lower().endswith('.png')]
     png_files.sort(key=natural_key)
     print("Found PNG files:", png_files)
@@ -460,19 +458,24 @@ def get_segmentation_endpoint():
 @app.route('/render_to_uv', methods=['POST'])
 def render_to_uv_endpoint():
     """
-    Expects a multipart/form-data request with:
-      - zip_file: the ZIP file containing the necessary asset files.
-      - category: the asset category.
+    Generate the ORM UV map.
+    Expects a JSON payload with:
+      - zip_file: The folder path containing the generated outputs.
+      - category: The asset category.
     Returns the ORM UV map as a base64-encoded image.
     """
-    if 'zip_file' not in request.files:
-        return jsonify({"error": "Missing zip_file parameter"}), 400
-
-    zip_file = request.files['zip_file']
-    sample_folder = extract_zip_file(zip_file)
-    category = request.form.get("category")
-    if not category:
-        return jsonify({"error": "Missing category parameter"}), 400
+    # First, check for file upload (if any)
+    if 'zip_file' in request.files:
+        zip_file = request.files['zip_file']
+        sample_folder = extract_zip_file(zip_file)
+        category = request.form.get("category")
+    else:
+        # Otherwise, parse JSON payload.
+        data = request.get_json(silent=True)
+        sample_folder = data.get("zip_file") if data else None
+        category = data.get("category") if data else None
+        if not sample_folder or not category:
+            return jsonify({"error": "Missing zip_file or category parameter"}), 400
 
     try:
         orm_img = render_to_uv(sample_folder, category)
