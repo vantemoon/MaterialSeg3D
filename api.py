@@ -322,7 +322,7 @@ def render_to_uv(sample_folder: str, category: str):
     # Construct command using absolute paths:
     # --work_dir now uses the absolute path, and --sample_dir is the sample folder.
     cmd = (
-        f'python ./scripts/view_2_UV.py --cuda 2 --work_dir {work_dir} '
+        f'python ./scripts/view_2_UV_inference.py --cuda 2 --work_dir {work_dir} '
         f'--sample_dir {sample_folder} --sample {sample} --img_size 512 --category {category}'
     )
     print("Running render_to_uv command:", cmd)
