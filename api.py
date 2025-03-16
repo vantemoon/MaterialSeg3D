@@ -314,12 +314,22 @@ def render_to_uv(sample_folder: str, category: str):
     sample_folder = sample_folder.rstrip('/')
     sample = sample_folder.split('/')[-1]
     original_dir = os.getcwd()
-    os.chdir('./Text2Tex')
-    cmd = (f'python ./scripts/view_2_UV.py --cuda 2 --work_dir ../output/predict '
-           f'--sample_dir {sample_folder} --sample {sample} --img_size 512 --category {category}')
+
+    os.chdir('/app/MaterialSeg3D/Text2Tex')
+    work_dir = "/shared/output/predict"
+    os.makedirs(work_dir, exist_ok=True)
+
+    # Construct command using absolute paths:
+    # --work_dir now uses the absolute path, and --sample_dir is the sample folder.
+    cmd = (
+        f'python ./scripts/view_2_UV.py --cuda 2 --work_dir {work_dir} '
+        f'--sample_dir {sample_folder} --sample {sample} --img_size 512 --category {category}'
+    )
+    print("Running render_to_uv command:", cmd)
     os.system(cmd)
     os.chdir(original_dir)
-    ORM_dir = os.path.join('./output/ORM/', sample, 'ORM.png')
+
+    ORM_dir = os.path.join("/shared/output/ORM", sample, "ORM.png")
     os.system('cp ' + ORM_dir + ' ' + sample_folder)
     ORM = cv2.imread(ORM_dir)
     if ORM is None:
