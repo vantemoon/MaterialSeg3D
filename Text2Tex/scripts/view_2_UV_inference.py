@@ -106,6 +106,7 @@ else:
     print("no gpu avaiable")
     exit()
 
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:64"
 
 """
     Use Diffusion Models conditioned on depth input to back-project textures on 3D mesh.
@@ -456,7 +457,7 @@ def backproject_from_image(mesh, faces, verts_uvs, cameras,
         (image_size, image_size),
         Image.Resampling.NEAREST
     )
-    project_mask_image_tensor_scaled = transforms.ToTensor()(project_mask_image_scaled).to(device)
+    project_mask_image_tensor_scaled = torch.tensor(np.array(project_mask_image_scaled), dtype=torch.float32, device=DEVICE) / 255.0
 
 
 
@@ -601,19 +602,26 @@ if __name__ == "__main__":
     # Clear CUDA cache and check meomory usage
     torch.cuda.empty_cache()
     torch.cuda.ipc_collect()
-    torch.cuda.memory_summary()
+
+    init_material = init_material.resize((1024, 1024), Image.Resampling.LANCZOS)
+    init_material_np = np.array(init_material, dtype=np.float32) / 255.0
 
     # update the mesh 在更新过程中，将模型的顶点信息与 UV 图上的信息进行对照，以确保纹理图像————>3D模型mesh表面。
     mesh.textures = TexturesUV(
-        maps=transforms.ToTensor()(init_material)[None, ...].permute(0, 2, 3, 1).to(DEVICE), #maps 参数接受了一个纹理图像，这个图像会被映射到模型的表面上。这个图像经过了处理，以确保它的格式适用于 PyTorch 3D 库。
+        maps = torch.tensor(init_material_np, dtype=torch.float32, device=DEVICE).unsqueeze(0), #maps 参数接受了一个纹理图像，这个图像会被映射到模型的表面上。这个图像经过了处理，以确保它的格式适用于 PyTorch 3D 库。
         faces_uvs=faces.textures_idx[None, ...],  #faces_uvs 参数包含了三角面片的 UV 坐标索引。每个三角面片都有一个对应的 UV 坐标索引，用于确定在 UV 图上的哪个位置应用纹理。
         verts_uvs=new_verts_uvs[None, ...]  #verts_uvs 参数包含了模型的顶点的 UV 坐标。每个顶点都有一个 UV 坐标，用于确定在 UV 图上的哪个位置应用纹理
     )
 
+    torch.cuda.empty_cache()
+    torch.cuda.ipc_collect()
 
     # back-projected faces
     #创建了一个全零的二维张量，用于保存控制深度到图像的投影。它是一个用于深度到图像映射的辅助张量
-    exist_material = torch.from_numpy(np.zeros([uv_size, uv_size]).astype(np.float32)).to(DEVICE)
+
+    exist_material = torch.from_numpy(np.zeros([uv_size, uv_size], dtype=np.float32))
+    exist_material = exist_material.to(dtype=torch.float16, device=DEVICE)
+
 
     # initialize viewpoints 初始化了视点（观察角度）。它包括主要的用于生成的原始视点（principle viewpoints），以及用于更新的细化视点（refinement viewpoints）
     # including: principle viewpoints for generation + refinement viewpoints for updating
