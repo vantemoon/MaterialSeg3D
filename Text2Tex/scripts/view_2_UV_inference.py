@@ -205,7 +205,8 @@ def init_args():
         setattr(args, "render_simple_factor", 12) #图像渲染的简化因子。这个值通常用于控制渲染过程中的精细程度。较大的值可以提高图像的精细度
         setattr(args, "fragment_k", 1)
         setattr(args, "image_size", 768)
-        setattr(args, "uv_size", 3000)
+        # setattr(args, "uv_size", 3000)
+        setattr(args, "uv_size", 1000)
     else:
         setattr(args, "render_simple_factor", 4)
         setattr(args, "fragment_k", 1)
@@ -642,8 +643,8 @@ if __name__ == "__main__":
     # material_dir = os.path.join(output_dir, "material")
     # os.makedirs(material_dir, exist_ok=True)
 
-
-
+    torch.cuda.empty_cache()
+    torch.cuda.ipc_collect()
 
     pre_similarity_texture_cache = build_similarity_texture_cache_for_all_views(mesh, faces, new_verts_uvs,
         B, view_num,

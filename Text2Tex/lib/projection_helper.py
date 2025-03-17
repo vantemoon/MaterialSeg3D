@@ -29,6 +29,7 @@ from lib.shading_helper import (
 from lib.vis_helper import visualize_outputs, visualize_quad_mask
 from lib.constants import *
 
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:64"
 
 def get_all_4_locations(values_y, values_x):
     y_0 = torch.floor(values_y)
@@ -183,8 +184,12 @@ def build_backproject_mask(mesh, faces, verts_uvs,
     texture_values = texture_values.to(device).unsqueeze(0).expand([4, -1, -1, -1]).unsqueeze(0).expand([K, -1, -1, -1, -1])
 
     # texture
-    texture_tensor = torch.zeros(uv_size, uv_size, 3).to(device)
-    texture_tensor[texture_locations_y, texture_locations_x, :] = texture_values.reshape(-1, 3)
+    texture_tensor = torch.zeros((uv_size, uv_size, 3), dtype=torch.float16).to(device)
+    # texture_tensor[texture_locations_y, texture_locations_x, :] = texture_values.reshape(-1, 3)
+    texture_tensor = texture_tensor.cpu()
+    texture_tensor[texture_locations_y, texture_locations_x, :] = texture_values.reshape(-1, 3).cpu()
+    texture_tensor = texture_tensor.to(device)
+
 
     return texture_tensor[:, :, 0]
 
