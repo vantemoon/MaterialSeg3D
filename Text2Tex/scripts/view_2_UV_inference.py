@@ -598,6 +598,11 @@ if __name__ == "__main__":
     # pdb.set_trace()
     new_verts_uvs = aux.verts_uvs    #如果只是单个物体，则保留原始的UV映射
 
+    # Clear CUDA cache and check meomory usage
+    torch.cuda.empty_cache()
+    torch.cuda.ipc_collect()
+    torch.cuda.memory_summary()
+
     # update the mesh 在更新过程中，将模型的顶点信息与 UV 图上的信息进行对照，以确保纹理图像————>3D模型mesh表面。
     mesh.textures = TexturesUV(
         maps=transforms.ToTensor()(init_material)[None, ...].permute(0, 2, 3, 1).to(DEVICE), #maps 参数接受了一个纹理图像，这个图像会被映射到模型的表面上。这个图像经过了处理，以确保它的格式适用于 PyTorch 3D 库。
