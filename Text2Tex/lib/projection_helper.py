@@ -31,23 +31,13 @@ from lib.constants import *
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 
-def get_all_4_locations(values_y, values_x, device):
+def get_all_4_locations(values_y, values_x):
     y_0 = torch.floor(values_y)
     y_1 = torch.ceil(values_y)
     x_0 = torch.floor(values_x)
     x_1 = torch.ceil(values_x)
 
-    torch.cuda.empty_cache()
-    torch.cuda.ipc_collect()
-
-    y_concat = torch.cat([y_0.cpu(), y_0.cpu(), y_1.cpu(), y_1.cpu()], 0).long().to(device)
-    x_concat = torch.cat([x_0.cpu(), x_1.cpu(), x_0.cpu(), x_1.cpu()], 0).long().to(device)
-    y_concat = y_concat.to(dtype=torch.float16, device=device)
-    x_concat = x_concat.to(dtype=torch.float16, device=device)
-
-    return y_concat, x_concat
-
-    # return torch.cat([y_0, y_0, y_1, y_1], 0).long(), torch.cat([x_0, x_1, x_0, x_1], 0).long()
+    return torch.cat([y_0, y_0, y_1, y_1], 0).long(), torch.cat([x_0, x_1, x_0, x_1], 0).long()
 
 
 def compose_quad_mask(new_mask_image, update_mask_image, old_mask_image, device):
@@ -185,8 +175,7 @@ def build_backproject_mask(mesh, faces, verts_uvs,
 
     texture_locations_y, texture_locations_x = get_all_4_locations(
         (1 - pixel_uvs[:, 1]).reshape(-1) * (uv_size - 1),
-        pixel_uvs[:, 0].reshape(-1) * (uv_size - 1),
-        device
+        pixel_uvs[:, 0].reshape(-1) * (uv_size - 1)
     )
 
     K = faces_per_pixel
@@ -195,12 +184,8 @@ def build_backproject_mask(mesh, faces, verts_uvs,
     texture_values = texture_values.to(device).unsqueeze(0).expand([4, -1, -1, -1]).unsqueeze(0).expand([K, -1, -1, -1, -1])
 
     # texture
-    texture_tensor = torch.zeros((uv_size, uv_size, 3), dtype=torch.float16).to(device)
-    # texture_tensor[texture_locations_y, texture_locations_x, :] = texture_values.reshape(-1, 3)
-    texture_tensor = texture_tensor.cpu()
-    texture_tensor[texture_locations_y, texture_locations_x, :] = texture_values.reshape(-1, 3).cpu()
-    texture_tensor = texture_tensor.to(device)
-
+    texture_tensor = torch.zeros(uv_size, uv_size, 3).to(device)
+    texture_tensor[texture_locations_y, texture_locations_x, :] = texture_values.reshape(-1, 3)
 
     return texture_tensor[:, :, 0]
 
@@ -458,8 +443,7 @@ def backproject_from_image(mesh, faces, verts_uvs, cameras,
 
     texture_locations_y, texture_locations_x = get_all_4_locations(
         (1 - pixel_uvs_masked[:, 1]).reshape(-1) * (uv_size - 1), 
-        pixel_uvs_masked[:, 0].reshape(-1) * (uv_size - 1),
-        device
+        pixel_uvs_masked[:, 0].reshape(-1) * (uv_size - 1)
     )
     
     K = pixel_uvs.shape[0]
