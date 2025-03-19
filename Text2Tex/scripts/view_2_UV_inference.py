@@ -107,6 +107,7 @@ else:
     exit()
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:64"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 """
     Use Diffusion Models conditioned on depth input to back-project textures on 3D mesh.
@@ -461,7 +462,7 @@ def backproject_from_image(mesh, faces, verts_uvs, cameras,
     project_mask_image_tensor_scaled = torch.tensor(np.array(project_mask_image_scaled), dtype=torch.float32, device=DEVICE) / 255.0
 
 
-
+    pixel_uvs = pixel_uvs.squeeze(0)
     pixel_uvs_masked = pixel_uvs[project_mask_image_tensor_scaled == 1]
 
     texture_locations_y, texture_locations_x = get_all_4_locations(

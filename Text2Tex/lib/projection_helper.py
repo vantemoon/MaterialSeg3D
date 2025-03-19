@@ -29,7 +29,6 @@ from lib.shading_helper import (
 from lib.vis_helper import visualize_outputs, visualize_quad_mask
 from lib.constants import *
 
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 
 def get_all_4_locations(values_y, values_x):
     y_0 = torch.floor(values_y)
