@@ -807,10 +807,10 @@ if __name__ == "__main__":
     uv_stack_new = np.concatenate((uv_stack, tmp), axis=2)
 
     uv_w, uv_h, y = uv_stack_new.shape
-    flatten = uv_stack_new.reshape(-1, y).astype(np.int64)
+    flatten = uv_stack_new.reshape(-1, y).astype(np.int32)
     s, _ = flatten.shape
 
-    new = np.zeros((s,)).astype(np.int64)
+    new = np.zeros((s,)).astype(np.int32)
     for i in range(s):
         value = flatten[i]
 
