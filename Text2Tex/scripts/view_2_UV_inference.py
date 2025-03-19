@@ -206,8 +206,8 @@ def init_args():
         setattr(args, "render_simple_factor", 12) #图像渲染的简化因子。这个值通常用于控制渲染过程中的精细程度。较大的值可以提高图像的精细度
         setattr(args, "fragment_k", 1)
         setattr(args, "image_size", 768)
-        # setattr(args, "uv_size", 3000)
-        setattr(args, "uv_size", 1000)
+        setattr(args, "uv_size", 3000)
+        # setattr(args, "uv_size", 1000)
     else:
         setattr(args, "render_simple_factor", 4)
         setattr(args, "fragment_k", 1)
@@ -459,10 +459,10 @@ def backproject_from_image(mesh, faces, verts_uvs, cameras,
         (image_size, image_size),
         Image.Resampling.NEAREST
     )
-    project_mask_image_tensor_scaled = torch.tensor(np.array(project_mask_image_scaled), dtype=torch.float32, device=DEVICE) / 255.0
+    project_mask_image_tensor_scaled = transforms.ToTensor()(project_mask_image_scaled).to(device)
 
 
-    pixel_uvs = pixel_uvs.squeeze(0)
+    # pixel_uvs = pixel_uvs.squeeze(0)
     pixel_uvs_masked = pixel_uvs[project_mask_image_tensor_scaled == 1]
 
     texture_locations_y, texture_locations_x = get_all_4_locations(
@@ -471,8 +471,9 @@ def backproject_from_image(mesh, faces, verts_uvs, cameras,
     )
 
     K = pixel_uvs.shape[0]
-    project_mask_image_tensor_scaled = project_mask_image_tensor_scaled.unsqueeze(0).unsqueeze(0).unsqueeze(-1)
-    project_mask_image_tensor_scaled = project_mask_image_tensor_scaled.repeat(1, 4, 1, 1, 3)
+    project_mask_image_tensor_scaled = project_mask_image_tensor_scaled[:, None, :, :, None].repeat(1, 4, 1, 1, 3)
+    # project_mask_image_tensor_scaled = project_mask_image_tensor_scaled.unsqueeze(0).unsqueeze(0).unsqueeze(-1)
+    # project_mask_image_tensor_scaled = project_mask_image_tensor_scaled.repeat(1, 4, 1, 1, 3)
     # texture_values = torch.from_numpy(np.array(reference_image.resize((image_size, image_size))))
     #########此处增加一个对于单通道材质图的判断和处理
     # 将reference_image转换为NumPy数组
@@ -603,27 +604,28 @@ if __name__ == "__main__":
     new_verts_uvs = aux.verts_uvs    #如果只是单个物体，则保留原始的UV映射
 
     # Clear CUDA cache and check meomory usage
-    torch.cuda.empty_cache()
-    torch.cuda.ipc_collect()
+    # torch.cuda.empty_cache()
+    # torch.cuda.ipc_collect()
 
-    init_material = init_material.resize((1024, 1024), Image.Resampling.LANCZOS)
-    init_material_np = np.array(init_material, dtype=np.float32) / 255.0
+    # init_material = init_material.resize((1024, 1024), Image.Resampling.LANCZOS)
+    # init_material_np = np.array(init_material, dtype=np.float32) / 255.0
 
     # update the mesh 在更新过程中，将模型的顶点信息与 UV 图上的信息进行对照，以确保纹理图像————>3D模型mesh表面。
     mesh.textures = TexturesUV(
-        maps = torch.tensor(init_material_np, dtype=torch.float32, device=DEVICE).unsqueeze(0), #maps 参数接受了一个纹理图像，这个图像会被映射到模型的表面上。这个图像经过了处理，以确保它的格式适用于 PyTorch 3D 库。
+        maps=transforms.ToTensor()(init_material)[None, ...].permute(0, 2, 3, 1).to(DEVICE), #maps 参数接受了一个纹理图像，这个图像会被映射到模型的表面上。这个图像经过了处理，以确保它的格式适用于 PyTorch 3D 库。
         faces_uvs=faces.textures_idx[None, ...],  #faces_uvs 参数包含了三角面片的 UV 坐标索引。每个三角面片都有一个对应的 UV 坐标索引，用于确定在 UV 图上的哪个位置应用纹理。
         verts_uvs=new_verts_uvs[None, ...]  #verts_uvs 参数包含了模型的顶点的 UV 坐标。每个顶点都有一个 UV 坐标，用于确定在 UV 图上的哪个位置应用纹理
     )
 
-    torch.cuda.empty_cache()
-    torch.cuda.ipc_collect()
+    # torch.cuda.empty_cache()
+    # torch.cuda.ipc_collect()
 
     # back-projected faces
     #创建了一个全零的二维张量，用于保存控制深度到图像的投影。它是一个用于深度到图像映射的辅助张量
 
-    exist_material = torch.from_numpy(np.zeros([uv_size, uv_size], dtype=np.float32))
-    exist_material = exist_material.to(dtype=torch.float16, device=DEVICE)
+    exist_material = torch.from_numpy(np.zeros([uv_size, uv_size]).astype(np.float32)).to(DEVICE)
+    # exist_material = torch.from_numpy(np.zeros([uv_size, uv_size], dtype=np.float32))
+    # exist_material = exist_material.to(dtype=torch.float16, device=DEVICE)
 
 
     # initialize viewpoints 初始化了视点（观察角度）。它包括主要的用于生成的原始视点（principle viewpoints），以及用于更新的细化视点（refinement viewpoints）
@@ -645,8 +647,8 @@ if __name__ == "__main__":
     # material_dir = os.path.join(output_dir, "material")
     # os.makedirs(material_dir, exist_ok=True)
 
-    torch.cuda.empty_cache()
-    torch.cuda.ipc_collect()
+    # torch.cuda.empty_cache()
+    # torch.cuda.ipc_collect()
 
     pre_similarity_texture_cache = build_similarity_texture_cache_for_all_views(mesh, faces, new_verts_uvs,
         B, view_num,
