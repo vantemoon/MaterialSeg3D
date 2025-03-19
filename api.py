@@ -490,8 +490,16 @@ def render_to_uv_endpoint():
 
     try:
         orm_img = render_to_uv(sample_folder, category)
-        orm_b64 = np_to_base64(orm_img)
-        return jsonify({"ORM_image": orm_b64})
+        sample = sample_folder.rstrip('/').split('/')[-1]
+        orm_dir = os.path.join("/shared/output/ORM", sample)
+        os.makedirs(orm_dir, exist_ok=True)
+        orm_file_path = os.path.join(orm_dir, "ORM.png")
+        cv2.imwrite(orm_file_path, orm_img)
+
+        os.system('cp ' + orm_file_path + ' ' + sample_folder)
+        
+        orm_url = f"http://localhost:8080/static/output/ORM/{sample}/ORM.png"
+        return jsonify({"ORM_image_url": orm_url})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
