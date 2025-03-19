@@ -471,7 +471,8 @@ def backproject_from_image(mesh, faces, verts_uvs, cameras,
     )
 
     K = pixel_uvs.shape[0]
-    project_mask_image_tensor_scaled = project_mask_image_tensor_scaled[:, None, :, :, None].repeat(1, 4, 1, 1, 3)
+    project_mask_image_tensor_scaled = project_mask_image_tensor_scaled.unsqueeze(0).unsqueeze(0).unsqueeze(-1)
+    project_mask_image_tensor_scaled = project_mask_image_tensor_scaled.repeat(1, 4, 1, 1, 3)
     # texture_values = torch.from_numpy(np.array(reference_image.resize((image_size, image_size))))
     #########此处增加一个对于单通道材质图的判断和处理
     # 将reference_image转换为NumPy数组
