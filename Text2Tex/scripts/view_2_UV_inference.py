@@ -844,7 +844,7 @@ if __name__ == "__main__":
 
     # ORM_dir = UV_dir.replace('UV', 'ORM')
     # os.makedirs(os.path.join(ORM_dir, sample), exist_ok=True)
-    ORM_dir = os.path.join("/app/MaterialSeg3D/output/ORM", sample)
+    ORM_dir = os.path.join("/shared/output/ORM", sample)
     os.makedirs(ORM_dir, exist_ok=True)
 
     h, w = result_scale.shape
