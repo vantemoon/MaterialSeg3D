@@ -362,7 +362,7 @@ def display(sample_folder: str):
         print("Error output:", e.stderr)
         raise Exception("Blender command failed; see logs for details.")
     
-    mesh_path = os.path.join(sample_folder, f'{sample}_raw.glb')
+    mesh_path = os.path.join(sample_folder,"mesh.obj")
     if not os.path.exists(mesh_path):
         raise Exception(f"Mesh file '{mesh_path}' not found.")
     
@@ -497,7 +497,7 @@ def render_to_uv_endpoint():
         cv2.imwrite(orm_file_path, orm_img)
 
         os.system('cp ' + orm_file_path + ' ' + sample_folder)
-        
+
         orm_url = f"http://localhost:8080/static/output/ORM/{sample}/ORM.png"
         return jsonify({"ORM_image_url": orm_url})
     except Exception as e:
