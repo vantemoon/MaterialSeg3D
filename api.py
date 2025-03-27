@@ -362,7 +362,7 @@ def display(sample_folder: str):
         print("Error output:", e.stderr)
         raise Exception("Blender command failed; see logs for details.")
     
-    mesh_path = os.path.join(sample_folder,"mesh.obj")
+    mesh_path = f"/shared/{sample}/mesh.obj"
     if not os.path.exists(mesh_path):
         raise Exception(f"Mesh file '{mesh_path}' not found.")
     
