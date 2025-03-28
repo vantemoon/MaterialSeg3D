@@ -390,6 +390,10 @@ def example():
 # API Endpoints
 # ------------------
 
+@app.route('/shared/<path:filename>')
+def shared_files(filename):
+    return send_from_directory('/shared', filename)
+
 @app.route('/display', methods=['POST'])
 def display_endpoint():
     print("Display endpoint called.")
