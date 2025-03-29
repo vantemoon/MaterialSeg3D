@@ -406,9 +406,10 @@ def display_endpoint():
             raise Exception(f"Sample folder '{sample_folder}' does not exist.")
         print("Display endpoint: sample_folder =", sample_folder)
         print("Files in sample_folder:", os.listdir(sample_folder))
-        texture_file = os.path.join(sample_folder, "texture.png")
+        sample = sample_folder.rstrip('/').split('/')[-1]
+        texture_file = f"http://localhost:8080/static/{sample}/texture.png"
         uv = Image.open(texture_file)
-        mesh_path = os.path.join(sample_folder, "mesh.obj")
+        mesh_path = f"http://localhost:8080/static/{sample}/mesh.obj"
         uv_b64 = pil_to_base64(uv) if uv is not None else ""
         return jsonify({"uv_image": uv_b64, "mesh_path": mesh_path})
     except Exception as e:
